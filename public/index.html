@@ -267,11 +267,13 @@
       function looksLikeUrl(str) {
         const s = str.trim();
         if (!s) return false;
-        if (/^\w+:\/\//i.test(s)) return true;
         if (/\s/.test(s)) return false;
-        if (/^[\w.-]+\.[a-z]{2,}(\/.*)?$/i.test(s)) return true;
         try {
-          new URL("https://" + s);
+          const hasScheme = /^\w+:\/\//i.test(s);
+          const u = new URL(hasScheme ? s : "https://" + s);
+          const host = u.hostname || "";
+          // Require at least one dot in the hostname (e.g. example.com).
+          if (!host || !host.includes(".")) return false;
           return true;
         } catch {
           return false;
@@ -282,16 +284,21 @@
         raw = raw.trim();
         if (!raw) return;
         if (looksLikeUrl(raw)) {
-          const targetUrl = raw.startsWith("http://") || raw.startsWith("https://")
-            ? raw : "https://" + raw;
+          const targetUrl =
+            raw.startsWith("http://") || raw.startsWith("https://")
+              ? raw
+              : "https://" + raw;
           try {
             const u = new URL(targetUrl);
-            protoSpan.textContent = "https://";
+            protoSpan.textContent =
+              u.protocol === "https:" ? "https://" : "http://";
             tabTitle.textContent = u.hostname || "New Tab";
             input.value = u.href;
             frame.src = "/proxy?url=" + encodeURIComponent(u.href);
           } catch {
-            const q = "https://www.google.com/search?q=" + encodeURIComponent(raw);
+            const q =
+              "https://www.google.com/search?q=" +
+              encodeURIComponent(raw);
             protoSpan.textContent = "";
             tabTitle.textContent = "Search";
             input.value = raw;
@@ -301,7 +308,10 @@
           protoSpan.textContent = "";
           tabTitle.textContent = "Search";
           input.value = raw;
-          frame.src = "/proxy?url=" + encodeURIComponent("https://www.google.com/search?q=" + encodeURIComponent(raw));
+          const q =
+            "https://www.google.com/search?q=" +
+            encodeURIComponent(raw);
+          frame.src = "/proxy?url=" + encodeURIComponent(q);
         }
       }
 
