@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Plutonium Proxy</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet" />
+    <style>
+      /* Chrome light theme colors */
+      :root {
+        color-scheme: dark;
+        --chrome-tab-bar: #020617;
+        --chrome-tab-active: #020617;
+        --chrome-toolbar: #020617;
+        --chrome-omnibox-bg: #020617;
+        --chrome-omnibox-border: #1D4ED8;
+        --chrome-content: #020617;
+        --chrome-text: #E5E7EB;
+        --chrome-text-secondary: #9CA3AF;
+        --chrome-hover: rgba(37, 99, 235, 0.25);
+        --chrome-active-hover: rgba(37, 99, 235, 0.35);
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        font-family: "Roboto", system-ui, -apple-system, sans-serif;
+        background: var(--chrome-tab-bar);
+        color: var(--chrome-text);
+        overflow: hidden;
+      }
+      .chrome-window {
+        width: 100%;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        background: var(--chrome-content);
+      }
+      /* Tab bar: gray strip, nav buttons left, then tabs */
+      .chrome-tab-bar {
+        display: flex;
+        align-items: flex-end;
+        height: 36px;
+        min-height: 36px;
+        padding: 0 4px 0 0;
+        background: var(--chrome-tab-bar);
+      }
+      .chrome-nav-buttons {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        padding: 0 4px;
+        height: 36px;
+      }
+      .chrome-nav-buttons .icon-btn {
+        width: 28px;
+        height: 28px;
+        border: none;
+        border-radius: 50%;
+        background: transparent;
+        color: var(--chrome-text-secondary);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 18px;
+        line-height: 1;
+      }
+      .chrome-nav-buttons .icon-btn:hover {
+        background: var(--chrome-hover);
+      }
+      .chrome-nav-buttons .icon-btn:active {
+        background: var(--chrome-active-hover);
+      }
+      .chrome-nav-buttons .icon-btn:disabled {
+        opacity: 0.4;
+        cursor: default;
+      }
+      .chrome-tabs {
+        display: flex;
+        align-items: flex-end;
+        flex: 1;
+        min-width: 0;
+      }
+      .chrome-tab {
+        min-width: 72px;
+        max-width: 240px;
+        height: 28px;
+        padding: 0 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: var(--chrome-tab-bar);
+        border: 1px solid transparent;
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
+        margin-right: 2px;
+        font-size: 12px;
+        color: var(--chrome-text-secondary);
+      }
+      .chrome-tab.active {
+        height: 29px;
+        background: var(--chrome-tab-active);
+        color: var(--chrome-text);
+        border-color: #DADCE0;
+        border-bottom-color: var(--chrome-tab-active);
+        margin-bottom: -1px;
+      }
+      .chrome-tab-favicon {
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+        border-radius: 2px;
+        background: #1a73e8;
+      }
+      .chrome-tab-title {
+        flex: 1;
+        min-width: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .chrome-tab-close {
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+        border: none;
+        border-radius: 50%;
+        background: transparent;
+        color: var(--chrome-text-secondary);
+        font-size: 16px;
+        line-height: 1;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .chrome-tab-close:hover {
+        background: var(--chrome-hover);
+      }
+      /* Toolbar: omnibox row */
+      .chrome-toolbar {
+        display: flex;
+        align-items: center;
+        height: 46px;
+        min-height: 46px;
+        padding: 0 16px;
+        background: var(--chrome-toolbar);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+      }
+      .chrome-omnibox {
+        flex: 1;
+        max-width: 720px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 14px;
+        background: var(--chrome-omnibox-bg);
+        border: 1px solid var(--chrome-omnibox-border);
+        border-radius: 16px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      }
+      .chrome-omnibox:focus-within {
+        border-color: #1a73e8;
+        box-shadow: 0 0 0 1px #1a73e8;
+      }
+      .chrome-omnibox-icon {
+        width: 20px;
+        height: 20px;
+        flex-shrink: 0;
+        color: var(--chrome-text-secondary);
+      }
+      .chrome-omnibox-icon svg { width: 100%; height: 100%; }
+      .chrome-omnibox-proto {
+        font-size: 12px;
+        color: #1e8e3e;
+        font-weight: 500;
+      }
+      .chrome-omnibox-proto:empty { display: none; }
+      .chrome-omnibox-input-wrap {
+        flex: 1;
+        min-width: 0;
+      }
+      .chrome-omnibox input {
+        all: unset;
+        width: 100%;
+        font-size: 14px;
+        color: var(--chrome-text);
+      }
+      .chrome-omnibox input::placeholder {
+        color: var(--chrome-text-secondary);
+      }
+      /* Content area */
+      .chrome-content {
+        flex: 1;
+        min-height: 0;
+        background: var(--chrome-content);
+      }
+      .chrome-content iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="chrome-window">
+      <div class="chrome-tab-bar">
+        <div class="chrome-nav-buttons">
+          <button type="button" class="icon-btn" id="back-btn" title="Back" disabled>‹</button>
+          <button type="button" class="icon-btn" id="forward-btn" title="Forward" disabled>›</button>
+          <button type="button" class="icon-btn" id="reload-btn" title="Reload">↻</button>
+        </div>
+        <div class="chrome-tabs">
+          <div class="chrome-tab active">
+            <div class="chrome-tab-favicon"></div>
+            <span class="chrome-tab-title" id="tab-title">New Tab</span>
+            <button type="button" class="chrome-tab-close" aria-label="Close">×</button>
+          </div>
+        </div>
+      </div>
+      <div class="chrome-toolbar">
+        <div class="chrome-omnibox">
+          <div class="chrome-omnibox-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/>
+              <path d="m21 21-4.35-4.35"/>
+            </svg>
+          </div>
+          <span class="chrome-omnibox-proto" id="omnibox-proto"></span>
+          <div class="chrome-omnibox-input-wrap">
+            <form id="proxy-form">
+              <input
+                id="url-input"
+                type="text"
+                autocomplete="off"
+                placeholder="Search Google or type a URL"
+                spellcheck="false"
+              />
+            </form>
+          </div>
+        </div>
+      </div>
+      <div class="chrome-content">
+        <iframe
+          id="proxy-frame"
+          title="Page content"
+          sandbox="allow-same-origin allow-forms allow-scripts allow-popups allow-pointer-lock allow-modals allow-downloads"
+        ></iframe>
+      </div>
+    </div>
+    <script>
+      const form = document.getElementById("proxy-form");
+      const input = document.getElementById("url-input");
+      const frame = document.getElementById("proxy-frame");
+      const tabTitle = document.getElementById("tab-title");
+      const protoSpan = document.getElementById("omnibox-proto");
+      const reloadBtn = document.getElementById("reload-btn");
+      const backBtn = document.getElementById("back-btn");
+      const forwardBtn = document.getElementById("forward-btn");
+
+      function looksLikeUrl(str) {
+        const s = str.trim();
+        if (!s) return false;
+        if (/^\w+:\/\//i.test(s)) return true;
+        if (/\s/.test(s)) return false;
+        if (/^[\w.-]+\.[a-z]{2,}(\/.*)?$/i.test(s)) return true;
+        try {
+          new URL("https://" + s);
+          return true;
+        } catch {
+          return false;
+        }
+      }
+
+      function navigate(raw) {
+        raw = raw.trim();
+        if (!raw) return;
+        if (looksLikeUrl(raw)) {
+          const targetUrl = raw.startsWith("http://") || raw.startsWith("https://")
+            ? raw : "https://" + raw;
+          try {
+            const u = new URL(targetUrl);
+            protoSpan.textContent = "https://";
+            tabTitle.textContent = u.hostname || "New Tab";
+            input.value = u.href;
+            frame.src = "/proxy?url=" + encodeURIComponent(u.href);
+          } catch {
+            const q = "https://www.google.com/search?q=" + encodeURIComponent(raw);
+            protoSpan.textContent = "";
+            tabTitle.textContent = "Search";
+            input.value = raw;
+            frame.src = "/proxy?url=" + encodeURIComponent(q);
+          }
+        } else {
+          protoSpan.textContent = "";
+          tabTitle.textContent = "Search";
+          input.value = raw;
+          frame.src = "/proxy?url=" + encodeURIComponent("https://www.google.com/search?q=" + encodeURIComponent(raw));
+        }
+      }
+
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        navigate(input.value);
+      });
+
+      reloadBtn.addEventListener("click", () => {
+        if (!frame.src) return;
+        frame.src = frame.src;
+      });
+
+      backBtn.addEventListener("click", () => window.history.back());
+      forwardBtn.addEventListener("click", () => window.history.forward());
+    </script>
+  </body>
+</html>
