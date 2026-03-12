@@ -6,115 +6,160 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
     <style>
-      /* Chrome light theme colors */
       :root {
         color-scheme: dark;
-        --chrome-tab-bar: #020617;
-        --chrome-tab-active: #020617;
-        --chrome-toolbar: #020617;
-        --chrome-omnibox-bg: #020617;
-        --chrome-omnibox-border: #1D4ED8;
-        --chrome-content: #020617;
-        --chrome-text: #E5E7EB;
-        --chrome-text-secondary: #9CA3AF;
-        --chrome-hover: rgba(37, 99, 235, 0.25);
-        --chrome-active-hover: rgba(37, 99, 235, 0.35);
+        --bg: #0a0e17;
+        --tab-bar: #0d1117;
+        --tab-inactive: #161b22;
+        --tab-active: #0d1117;
+        --tab-active-border: rgba(56, 189, 248, 0.5);
+        --toolbar: #0d1117;
+        --omnibox-bg: #161b22;
+        --omnibox-border: #30363d;
+        --omnibox-focus: rgba(56, 189, 248, 0.6);
+        --content: #0a0e17;
+        --text: #e6edf3;
+        --text-dim: #8b949e;
+        --accent: #38bdf8;
+        --accent-soft: rgba(56, 189, 248, 0.15);
+        --hover: rgba(56, 189, 248, 0.12);
+        --glow: 0 0 20px rgba(56, 189, 248, 0.15);
       }
       * { box-sizing: border-box; }
+      html {
+        scroll-behavior: smooth;
+      }
       html, body {
         margin: 0;
         padding: 0;
         height: 100%;
-        font-family: "Roboto", system-ui, -apple-system, sans-serif;
-        background: var(--chrome-tab-bar);
-        color: var(--chrome-text);
+        font-family: "Inter", system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--text);
         overflow: hidden;
+      }
+      /* Snappy, smooth easing */
+      :root {
+        --ease-out: cubic-bezier(0.33, 1, 0.68, 1);
+        --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
       }
       .chrome-window {
         width: 100%;
         height: 100vh;
         display: flex;
         flex-direction: column;
-        background: var(--chrome-content);
+        background: var(--content);
       }
-      /* Tab bar: gray strip, nav buttons left, then tabs */
       .chrome-tab-bar {
         display: flex;
         align-items: flex-end;
-        height: 36px;
-        min-height: 36px;
-        padding: 0 4px 0 0;
-        background: var(--chrome-tab-bar);
+        height: 40px;
+        min-height: 40px;
+        padding: 0 2px 0 0;
+        background: linear-gradient(180deg, var(--tab-bar) 0%, #0a0e17 100%);
+        border-bottom: 1px solid rgba(48, 54, 61, 0.6);
       }
       .chrome-nav-buttons {
         display: flex;
         align-items: center;
         gap: 2px;
-        padding: 0 4px;
-        height: 36px;
+        padding: 0 6px;
+        height: 40px;
       }
       .chrome-nav-buttons .icon-btn {
-        width: 28px;
-        height: 28px;
+        width: 32px;
+        height: 32px;
         border: none;
-        border-radius: 50%;
+        border-radius: 8px;
         background: transparent;
-        color: var(--chrome-text-secondary);
+        color: var(--text-dim);
         display: inline-flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
         font-size: 18px;
         line-height: 1;
+        transition: background 0.2s var(--ease-out), color 0.2s var(--ease-out), transform 0.15s var(--ease-out);
       }
-      .chrome-nav-buttons .icon-btn:hover {
-        background: var(--chrome-hover);
+      .chrome-nav-buttons .icon-btn:active:not(:disabled) {
+        transform: scale(0.92);
       }
-      .chrome-nav-buttons .icon-btn:active {
-        background: var(--chrome-active-hover);
+      .chrome-nav-buttons .icon-btn:hover:not(:disabled) {
+        background: var(--hover);
+        color: var(--text);
       }
       .chrome-nav-buttons .icon-btn:disabled {
-        opacity: 0.4;
+        opacity: 0.35;
         cursor: default;
       }
-      .chrome-tabs {
+      .chrome-tabs-wrap {
         display: flex;
         align-items: flex-end;
         flex: 1;
         min-width: 0;
+        gap: 2px;
+      }
+      .chrome-tabs {
+        overflow-x: auto;
+        overflow-y: hidden;
+        scroll-behavior: smooth;
+        -webkit-overflow-scrolling: touch;
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        align-items: flex-end;
+        gap: 2px;
+      }
+      .chrome-tabs::-webkit-scrollbar {
+        height: 4px;
+      }
+      .chrome-tabs::-webkit-scrollbar-thumb {
+        background: var(--omnibox-border);
+        border-radius: 2px;
       }
       .chrome-tab {
-        min-width: 72px;
-        max-width: 240px;
-        height: 28px;
-        padding: 0 12px;
+        min-width: 80px;
+        max-width: 200px;
+        height: 32px;
+        transition: height 0.2s var(--ease-out), margin-bottom 0.2s var(--ease-out),
+          background 0.2s var(--ease-out), border-color 0.2s var(--ease-out),
+          color 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out),
+          opacity 0.15s var(--ease-out), transform 0.15s var(--ease-out);
+        padding: 0 12px 0 10px;
         display: flex;
         align-items: center;
         gap: 8px;
-        background: var(--chrome-tab-bar);
+        background: var(--tab-inactive);
         border: 1px solid transparent;
-        border-top-left-radius: 8px;
-        border-top-right-radius: 8px;
-        margin-right: 2px;
+        border-top-left-radius: 10px;
+        border-top-right-radius: 10px;
+        margin-right: 0;
         font-size: 12px;
-        color: var(--chrome-text-secondary);
+        color: var(--text-dim);
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+      .chrome-tab:hover {
+        background: #1c2128;
+        color: var(--text);
       }
       .chrome-tab.active {
-        height: 29px;
-        background: var(--chrome-tab-active);
-        color: var(--chrome-text);
-        border-color: #DADCE0;
-        border-bottom-color: var(--chrome-tab-active);
+        height: 34px;
+        background: var(--tab-active);
+        color: var(--text);
+        border-color: var(--tab-active-border);
+        border-bottom-color: var(--tab-active);
         margin-bottom: -1px;
+        box-shadow: var(--glow);
       }
       .chrome-tab-favicon {
-        width: 16px;
-        height: 16px;
+        width: 14px;
+        height: 14px;
         flex-shrink: 0;
-        border-radius: 2px;
-        background: #1a73e8;
+        border-radius: 3px;
+        background: linear-gradient(135deg, var(--accent), #6366f1);
       }
       .chrome-tab-title {
         flex: 1;
@@ -124,83 +169,127 @@
         text-overflow: ellipsis;
       }
       .chrome-tab-close {
-        width: 18px;
-        height: 18px;
+        width: 20px;
+        height: 20px;
         flex-shrink: 0;
         border: none;
-        border-radius: 50%;
+        border-radius: 6px;
         background: transparent;
-        color: var(--chrome-text-secondary);
+        color: var(--text-dim);
         font-size: 16px;
         line-height: 1;
         cursor: pointer;
         display: inline-flex;
         align-items: center;
         justify-content: center;
+        opacity: 0.7;
+        transition: background 0.2s var(--ease-out), color 0.2s var(--ease-out), opacity 0.2s var(--ease-out), transform 0.15s var(--ease-out);
       }
       .chrome-tab-close:hover {
-        background: var(--chrome-hover);
+        background: rgba(248, 81, 73, 0.2);
+        color: #f85149;
+        opacity: 1;
       }
-      /* Toolbar: omnibox row */
+      .chrome-tab-close:active {
+        transform: scale(0.9);
+      }
+      .chrome-tab-new {
+        width: 32px;
+        height: 32px;
+        flex-shrink: 0;
+        border: none;
+        border-radius: 8px;
+        background: transparent;
+        color: var(--text-dim);
+        font-size: 20px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: 2px;
+        transition: background 0.2s var(--ease-out), color 0.2s var(--ease-out), transform 0.15s var(--ease-out);
+      }
+      .chrome-tab-new:hover {
+        background: var(--hover);
+        color: var(--accent);
+      }
+      .chrome-tab-new:active {
+        transform: scale(0.92);
+      }
+      .chrome-tab.closing {
+        opacity: 0;
+        transform: scale(0.96);
+        pointer-events: none;
+        transition: opacity 0.15s var(--ease-out), transform 0.15s var(--ease-out);
+      }
       .chrome-toolbar {
         display: flex;
         align-items: center;
-        height: 46px;
-        min-height: 46px;
-        padding: 0 16px;
-        background: var(--chrome-toolbar);
-        border-bottom: 1px solid rgba(0,0,0,0.08);
+        height: 48px;
+        min-height: 48px;
+        padding: 0 20px;
+        background: linear-gradient(180deg, var(--toolbar) 0%, rgba(13, 17, 23, 0.98) 100%);
+        border-bottom: 1px solid rgba(48, 54, 61, 0.5);
       }
       .chrome-omnibox {
         flex: 1;
-        max-width: 720px;
-        height: 32px;
+        max-width: 680px;
+        height: 36px;
         display: flex;
         align-items: center;
-        gap: 10px;
-        padding: 0 14px;
-        background: var(--chrome-omnibox-bg);
-        border: 1px solid var(--chrome-omnibox-border);
-        border-radius: 16px;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        gap: 12px;
+        padding: 0 16px;
+        background: var(--omnibox-bg);
+        border: 1px solid var(--omnibox-border);
+        border-radius: 10px;
+        transition: border-color 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out), background 0.2s var(--ease-out);
       }
       .chrome-omnibox:focus-within {
-        border-color: #1a73e8;
-        box-shadow: 0 0 0 1px #1a73e8;
+        border-color: var(--omnibox-focus);
+        box-shadow: 0 0 0 2px var(--accent-soft);
       }
       .chrome-omnibox-icon {
-        width: 20px;
-        height: 20px;
+        width: 18px;
+        height: 18px;
         flex-shrink: 0;
-        color: var(--chrome-text-secondary);
+        color: var(--text-dim);
       }
       .chrome-omnibox-icon svg { width: 100%; height: 100%; }
       .chrome-omnibox-proto {
-        font-size: 12px;
-        color: #1e8e3e;
+        font-size: 11px;
+        color: #3fb950;
         font-weight: 500;
       }
       .chrome-omnibox-proto:empty { display: none; }
-      .chrome-omnibox-input-wrap {
-        flex: 1;
-        min-width: 0;
-      }
+      .chrome-omnibox-input-wrap { flex: 1; min-width: 0; }
       .chrome-omnibox input {
         all: unset;
         width: 100%;
-        font-size: 14px;
-        color: var(--chrome-text);
+        font-size: 13px;
+        color: var(--text);
       }
       .chrome-omnibox input::placeholder {
-        color: var(--chrome-text-secondary);
+        color: var(--text-dim);
       }
-      /* Content area */
       .chrome-content {
         flex: 1;
         min-height: 0;
-        background: var(--chrome-content);
+        background: var(--content);
+        position: relative;
       }
-      .chrome-content iframe {
+      .chrome-content .tab-pane {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.18s var(--ease-out);
+        will-change: opacity;
+      }
+      .chrome-content .tab-pane.active {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .chrome-content .tab-pane iframe {
         width: 100%;
         height: 100%;
         border: none;
@@ -216,12 +305,9 @@
           <button type="button" class="icon-btn" id="forward-btn" title="Forward" disabled>›</button>
           <button type="button" class="icon-btn" id="reload-btn" title="Reload">↻</button>
         </div>
-        <div class="chrome-tabs">
-          <div class="chrome-tab active">
-            <div class="chrome-tab-favicon"></div>
-            <span class="chrome-tab-title" id="tab-title">New Tab</span>
-            <button type="button" class="chrome-tab-close" aria-label="Close">×</button>
-          </div>
+        <div class="chrome-tabs-wrap">
+          <div class="chrome-tabs" id="tab-strip"></div>
+          <button type="button" class="chrome-tab-new" id="new-tab-btn" title="New tab" aria-label="New tab">+</button>
         </div>
       </div>
       <div class="chrome-toolbar">
@@ -235,44 +321,162 @@
           <span class="chrome-omnibox-proto" id="omnibox-proto"></span>
           <div class="chrome-omnibox-input-wrap">
             <form id="proxy-form">
-              <input
-                id="url-input"
-                type="text"
-                autocomplete="off"
-                placeholder="Search Google or type a URL"
-                spellcheck="false"
-              />
+              <input id="url-input" type="text" autocomplete="off" placeholder="Search Google or type a URL" spellcheck="false" />
             </form>
           </div>
         </div>
       </div>
-      <div class="chrome-content">
-        <iframe
-          id="proxy-frame"
-          title="Page content"
-          sandbox="allow-same-origin allow-forms allow-scripts allow-popups allow-pointer-lock allow-modals allow-downloads"
-        ></iframe>
-      </div>
+      <div class="chrome-content" id="tab-panes"></div>
     </div>
     <script>
+      const tabStrip = document.getElementById("tab-strip");
+      const tabPanes = document.getElementById("tab-panes");
       const form = document.getElementById("proxy-form");
       const input = document.getElementById("url-input");
-      const frame = document.getElementById("proxy-frame");
-      const tabTitle = document.getElementById("tab-title");
       const protoSpan = document.getElementById("omnibox-proto");
       const reloadBtn = document.getElementById("reload-btn");
       const backBtn = document.getElementById("back-btn");
       const forwardBtn = document.getElementById("forward-btn");
+      const newTabBtn = document.getElementById("new-tab-btn");
+
+      let tabs = [];
+      let activeTabId = null;
+
+      function nextId() {
+        return "t" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
+      }
+
+      function getTab(id) {
+        return tabs.find((t) => t.id === id);
+      }
+
+      function getActiveTab() {
+        return activeTabId ? getTab(activeTabId) : null;
+      }
+
+      function tabTitleFromUrl(url) {
+        if (!url) return "New Tab";
+        try {
+          const u = new URL(url);
+          return u.hostname || "New Tab";
+        } catch {
+          return url.length > 30 ? url.slice(0, 30) + "…" : url || "New Tab";
+        }
+      }
+
+      function createTab(id = nextId(), options = {}) {
+        const tab = {
+          id,
+          title: options.title ?? "New Tab",
+          url: options.url ?? "",
+          displayUrl: options.displayUrl ?? "",
+          isSearch: options.isSearch ?? false,
+        };
+        tabs.push(tab);
+
+        const tabEl = document.createElement("div");
+        tabEl.className = "chrome-tab" + (activeTabId === id ? " active" : "");
+        tabEl.dataset.tabId = id;
+        tabEl.innerHTML = `
+          <div class="chrome-tab-favicon"></div>
+          <span class="chrome-tab-title">${escapeHtml(tab.title)}</span>
+          <button type="button" class="chrome-tab-close" aria-label="Close tab">×</button>
+        `;
+        tabEl.querySelector(".chrome-tab-title").textContent = tab.title;
+        tabEl.querySelector(".chrome-tab-close").addEventListener("click", (e) => {
+          e.stopPropagation();
+          closeTab(id);
+        });
+        tabEl.addEventListener("click", (e) => {
+          if (!e.target.classList.contains("chrome-tab-close")) switchTab(id);
+        });
+        tabStrip.appendChild(tabEl);
+        tab.dom = tabEl;
+
+        const pane = document.createElement("div");
+        pane.className = "tab-pane" + (activeTabId === id ? " active" : "");
+        pane.dataset.tabId = id;
+        const iframe = document.createElement("iframe");
+        iframe.title = "Page content";
+        iframe.sandbox = "allow-same-origin allow-forms allow-scripts allow-popups allow-pointer-lock allow-modals allow-downloads";
+        if (tab.url) iframe.src = "/proxy?url=" + encodeURIComponent(tab.url);
+        pane.appendChild(iframe);
+        tabPanes.appendChild(pane);
+        tab.pane = pane;
+        tab.frame = iframe;
+
+        return tab;
+      }
+
+      function escapeHtml(s) {
+        const div = document.createElement("div");
+        div.textContent = s;
+        return div.innerHTML;
+      }
+
+      function closeTab(id) {
+        const idx = tabs.findIndex((t) => t.id === id);
+        if (idx === -1) return;
+        const tab = tabs[idx];
+        let done = false;
+        const onDone = () => {
+          if (done) return;
+          done = true;
+          tab.dom?.remove();
+          tab.pane?.remove();
+          tabs.splice(tabs.indexOf(tab), 1);
+          if (tabs.length === 0) {
+            activeTabId = null;
+            createTab(nextId());
+            switchTab(tabs[0].id);
+            return;
+          }
+          if (activeTabId === id) {
+            const nextIdx = Math.min(idx, tabs.length - 1);
+            switchTab(tabs[nextIdx].id);
+          }
+          renderTabActive();
+        };
+        tab.dom?.classList.add("closing");
+        if (tab.dom) {
+          tab.dom.addEventListener("transitionend", onDone, { once: true });
+          setTimeout(onDone, 200);
+        } else {
+          onDone();
+        }
+      }
+
+      function switchTab(id) {
+        activeTabId = id;
+        requestAnimationFrame(() => {
+          renderTabActive();
+          const tab = getTab(id);
+          if (tab) {
+            input.value = tab.isSearch ? tab.displayUrl : tab.url;
+            protoSpan.textContent = tab.isSearch ? "" : (tab.url && tab.url.startsWith("https") ? "https://" : "");
+            tab.dom?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+          }
+        });
+      }
+
+      function renderTabActive() {
+        tabStrip.querySelectorAll(".chrome-tab").forEach((el) => {
+          el.classList.toggle("active", el.dataset.tabId === activeTabId);
+        });
+        tabPanes.querySelectorAll(".tab-pane").forEach((el) => {
+          const active = el.dataset.tabId === activeTabId;
+          el.classList.toggle("active", active);
+          el.setAttribute("aria-hidden", active ? "false" : "true");
+        });
+      }
 
       function looksLikeUrl(str) {
         const s = str.trim();
-        if (!s) return false;
-        if (/\s/.test(s)) return false;
+        if (!s || /\s/.test(s)) return false;
         try {
           const hasScheme = /^\w+:\/\//i.test(s);
           const u = new URL(hasScheme ? s : "https://" + s);
           const host = u.hostname || "";
-          // Require at least one dot in the hostname (e.g. example.com).
           if (!host || !host.includes(".")) return false;
           return true;
         } catch {
@@ -283,36 +487,41 @@
       function navigate(raw) {
         raw = raw.trim();
         if (!raw) return;
+        const tab = getActiveTab();
+        if (!tab) return;
+
+        let finalUrl = "";
+        let displayUrl = raw;
+        let isSearch = false;
+        let title = "New Tab";
+
         if (looksLikeUrl(raw)) {
-          const targetUrl =
-            raw.startsWith("http://") || raw.startsWith("https://")
-              ? raw
-              : "https://" + raw;
+          const targetUrl = raw.startsWith("http://") || raw.startsWith("https://") ? raw : "https://" + raw;
           try {
             const u = new URL(targetUrl);
-            protoSpan.textContent =
-              u.protocol === "https:" ? "https://" : "http://";
-            tabTitle.textContent = u.hostname || "New Tab";
-            input.value = u.href;
-            frame.src = "/proxy?url=" + encodeURIComponent(u.href);
+            finalUrl = u.href;
+            title = u.hostname || "New Tab";
           } catch {
-            const q =
-              "https://www.google.com/search?q=" +
-              encodeURIComponent(raw);
-            protoSpan.textContent = "";
-            tabTitle.textContent = "Search";
-            input.value = raw;
-            frame.src = "/proxy?url=" + encodeURIComponent(q);
+            finalUrl = "https://www.google.com/search?q=" + encodeURIComponent(raw);
+            isSearch = true;
+            title = "Search";
+            displayUrl = raw;
           }
         } else {
-          protoSpan.textContent = "";
-          tabTitle.textContent = "Search";
-          input.value = raw;
-          const q =
-            "https://www.google.com/search?q=" +
-            encodeURIComponent(raw);
-          frame.src = "/proxy?url=" + encodeURIComponent(q);
+          finalUrl = "https://www.google.com/search?q=" + encodeURIComponent(raw);
+          isSearch = true;
+          title = "Search";
+          displayUrl = raw;
         }
+
+        tab.url = finalUrl;
+        tab.displayUrl = displayUrl;
+        tab.isSearch = isSearch;
+        tab.title = title;
+        if (tab.dom) tab.dom.querySelector(".chrome-tab-title").textContent = title;
+        tab.frame.src = "/proxy?url=" + encodeURIComponent(finalUrl);
+        input.value = isSearch ? displayUrl : finalUrl;
+        protoSpan.textContent = isSearch ? "" : (finalUrl.startsWith("https") ? "https://" : "http://");
       }
 
       form.addEventListener("submit", (e) => {
@@ -321,12 +530,32 @@
       });
 
       reloadBtn.addEventListener("click", () => {
-        if (!frame.src) return;
-        frame.src = frame.src;
+        const tab = getActiveTab();
+        if (tab?.frame?.src) tab.frame.src = tab.frame.src;
       });
 
-      backBtn.addEventListener("click", () => window.history.back());
-      forwardBtn.addEventListener("click", () => window.history.forward());
+      backBtn.addEventListener("click", () => {
+        const tab = getActiveTab();
+        tab?.frame?.contentWindow?.history?.back();
+      });
+      forwardBtn.addEventListener("click", () => {
+        const tab = getActiveTab();
+        tab?.frame?.contentWindow?.history?.forward();
+      });
+
+      newTabBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const id = nextId();
+        createTab(id);
+        switchTab(id);
+        input.value = "";
+        protoSpan.textContent = "";
+        input.focus();
+      });
+
+      createTab(nextId());
+      switchTab(tabs[0].id);
     </script>
   </body>
 </html>
