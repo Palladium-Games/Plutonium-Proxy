@@ -301,8 +301,8 @@
     <div class="chrome-window">
       <div class="chrome-tab-bar">
         <div class="chrome-nav-buttons">
-          <button type="button" class="icon-btn" id="back-btn" title="Back" disabled>‹</button>
-          <button type="button" class="icon-btn" id="forward-btn" title="Forward" disabled>›</button>
+          <button type="button" class="icon-btn" id="back-btn" title="Back (Alt+Left)">‹</button>
+          <button type="button" class="icon-btn" id="forward-btn" title="Forward (Alt+Right)">›</button>
           <button type="button" class="icon-btn" id="reload-btn" title="Reload">↻</button>
         </div>
         <div class="chrome-tabs-wrap">
@@ -311,7 +311,7 @@
         </div>
       </div>
       <div class="chrome-toolbar">
-        <div class="chrome-omnibox">
+        <div class="chrome-omnibox" id="chrome-omnibox" role="combobox" aria-label="Address bar">
           <div class="chrome-omnibox-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="11" cy="11" r="8"/>
@@ -404,6 +404,30 @@
         tabPanes.appendChild(pane);
         tab.pane = pane;
         tab.frame = iframe;
+
+        iframe.addEventListener("load", () => {
+          try {
+            const href = iframe.contentWindow?.location?.href || "";
+            const match = href.match(/[?&]url=([^&]+)/);
+            const decoded = match ? decodeURIComponent(match[1]) : "";
+            if (decoded && decoded.startsWith("http")) {
+              tab.url = decoded;
+              tab.isSearch = false;
+              tab.displayUrl = "";
+              try {
+                const u = new URL(decoded);
+                tab.title = iframe.contentDocument?.title || u.hostname || "New Tab";
+              } catch {
+                tab.title = "New Tab";
+              }
+              if (tab.dom) tab.dom.querySelector(".chrome-tab-title").textContent = tab.title;
+              if (activeTabId === id) {
+                input.value = tab.url;
+                protoSpan.textContent = tab.url.startsWith("https") ? "https://" : "http://";
+              }
+            }
+          } catch (_) {}
+        });
 
         return tab;
       }
@@ -553,6 +577,63 @@
         protoSpan.textContent = "";
         input.focus();
       });
+
+      document.addEventListener("keydown", (e) => {
+        if (e.ctrlKey || e.metaKey) {
+          if (e.key === "t") {
+            e.preventDefault();
+            newTabBtn.click();
+            return;
+          }
+          if (e.key === "w") {
+            e.preventDefault();
+            const tab = getActiveTab();
+            if (tab) closeTab(tab.id);
+            return;
+          }
+          if (e.key === "r") {
+            e.preventDefault();
+            reloadBtn.click();
+            return;
+          }
+          if (e.key === "l") {
+            e.preventDefault();
+            input.focus();
+            input.select();
+            return;
+          }
+          if (e.key === "Tab") {
+            e.preventDefault();
+            const idx = tabs.findIndex((t) => t.id === activeTabId);
+            if (e.shiftKey) {
+              switchTab(tabs[(idx - 1 + tabs.length) % tabs.length].id);
+            } else {
+              switchTab(tabs[(idx + 1) % tabs.length].id);
+            }
+            return;
+          }
+        }
+        if (e.altKey) {
+          if (e.key === "ArrowLeft") {
+            e.preventDefault();
+            backBtn.click();
+            return;
+          }
+          if (e.key === "ArrowRight") {
+            e.preventDefault();
+            forwardBtn.click();
+            return;
+          }
+          if (e.key === "d") {
+            e.preventDefault();
+            input.focus();
+            input.select();
+            return;
+          }
+        }
+      });
+
+      document.getElementById("chrome-omnibox")?.addEventListener("click", (e) => { if (e.target !== input) input.focus(); });
 
       createTab(nextId());
       switchTab(tabs[0].id);
