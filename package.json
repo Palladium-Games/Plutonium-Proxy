@@ -4,8 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build": "npm test",
     "dev": "node src/server.js",
-    "start": "NODE_ENV=production node src/server.js"
+    "start": "NODE_ENV=production node src/server.js",
+    "test": "node --test"
   },
   "dependencies": {
     "compression": "^1.7.4",
