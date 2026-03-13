@@ -20,7 +20,7 @@ Plutonium is a local browser shell that loads remote pages through `/proxy?url=.
 - Modern sites with inline styles, import maps, workers, and service worker registration now have broader compatibility support than earlier builds.
 - Challenge-heavy pages now show a `Focus Mode` handoff that opens the same Plutonium session in a full browser tab when an embedded flow needs more room.
 - Watch the tab pulse and top progress bar during page loads.
-- Empty tabs open a Plutonium homescreen with the current time, saved bookmarks, and a customizable background.
+- Empty tabs open a minimal Plutonium homescreen with the current time, saved bookmarks, and a customizable background.
 - The shell now loads multiple frontend CSS and JavaScript assets instead of one giant inline page, so browser-style UI updates are easier to evolve.
 
 ## Homescreen

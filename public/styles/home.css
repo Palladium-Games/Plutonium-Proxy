@@ -2,15 +2,14 @@
   position: absolute;
   inset: 0;
   display: flex;
-  align-items: stretch;
+  align-items: flex-start;
   justify-content: center;
-  padding: 32px clamp(18px, 4vw, 42px);
+  padding: 40px clamp(18px, 4vw, 40px);
   overflow-y: auto;
   color: var(--text);
   background:
-    radial-gradient(circle at top right, rgba(56, 189, 248, 0.18), transparent 32%),
-    radial-gradient(circle at bottom left, rgba(99, 102, 241, 0.16), transparent 36%),
-    linear-gradient(180deg, rgba(10, 14, 23, 0.94), rgba(7, 10, 18, 0.98));
+    radial-gradient(circle at top, rgba(56, 189, 248, 0.1), transparent 34%),
+    linear-gradient(180deg, rgba(8, 12, 18, 0.98), rgba(10, 13, 20, 0.98));
 }
 
 .tab-pane-home.hidden {
@@ -21,11 +20,9 @@
   content: "";
   position: absolute;
   inset: 0;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 28px 28px;
-  opacity: 0.18;
+  background:
+    radial-gradient(circle at 18% 22%, rgba(255, 255, 255, 0.04), transparent 24%),
+    radial-gradient(circle at 82% 12%, rgba(56, 189, 248, 0.06), transparent 20%);
   pointer-events: none;
 }
 
@@ -37,163 +34,218 @@
 .home-shell {
   position: relative;
   z-index: 1;
-  width: min(1080px, 100%);
+  width: min(860px, 100%);
   display: grid;
-  gap: 22px;
+  gap: 20px;
   align-content: start;
 }
 
 .home-topbar {
   display: flex;
-  justify-content: flex-end;
-}
-
-.home-chip {
-  border: 1px solid var(--surface-border);
-  background: rgba(12, 18, 32, 0.72);
-  color: var(--text);
-  border-radius: 999px;
-  padding: 9px 14px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  backdrop-filter: blur(14px);
-  transition: transform 0.16s var(--ease-out), border-color 0.2s var(--ease-out), background 0.2s var(--ease-out);
-}
-
-.home-chip:hover {
-  transform: translateY(-1px);
-  border-color: rgba(56, 189, 248, 0.35);
-  background: rgba(18, 28, 48, 0.84);
-}
-
-.home-hero {
-  padding: 28px;
-  border: 1px solid var(--surface-border);
-  border-radius: 28px;
-  background: linear-gradient(160deg, rgba(10, 17, 31, 0.82), rgba(10, 17, 31, 0.58));
-  backdrop-filter: blur(22px);
-  box-shadow: 0 22px 60px rgba(3, 8, 20, 0.45);
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .home-brand {
-  margin-bottom: 16px;
-  font-size: 13px;
-  letter-spacing: 0.28em;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: rgba(230, 237, 243, 0.68);
+}
+
+.home-chip {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.18s var(--ease-out), background 0.18s var(--ease-out), transform 0.14s var(--ease-out);
+}
+
+.home-chip:hover {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.home-chip:active {
+  transform: scale(0.98);
+}
+
+.home-hero {
+  padding: 6px 0 0;
 }
 
 .home-time {
-  font-size: clamp(52px, 11vw, 112px);
-  line-height: 0.95;
-  letter-spacing: -0.04em;
-  font-weight: 600;
+  font-size: clamp(58px, 12vw, 108px);
+  line-height: 0.92;
+  letter-spacing: -0.07em;
+  font-weight: 500;
 }
 
 .home-date {
-  margin-top: 12px;
-  font-size: clamp(14px, 2vw, 18px);
+  margin-top: 10px;
+  font-size: 15px;
   color: var(--text-dim);
 }
 
 .home-subtitle {
-  margin-top: 18px;
-  max-width: 640px;
-  color: rgba(230, 237, 243, 0.82);
-  font-size: 14px;
-  line-height: 1.6;
+  margin-top: 14px;
+  max-width: 480px;
+  color: rgba(230, 237, 243, 0.74);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.challenge-hint {
+  margin-top: 14px;
+  display: none;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 7px 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(249, 201, 123, 0.22);
+  background: rgba(249, 201, 123, 0.08);
+  font-size: 11px;
+  color: #f2d69d;
+  line-height: 1.4;
+}
+
+.challenge-hint.visible {
+  display: inline-flex;
 }
 
 .home-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.9fr);
-  gap: 22px;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .bookmark-board,
 .customize-card {
-  border: 1px solid var(--surface-border);
-  border-radius: 26px;
-  background: linear-gradient(180deg, rgba(11, 17, 30, 0.9), rgba(11, 17, 30, 0.72));
-  backdrop-filter: blur(18px);
-  box-shadow: 0 18px 46px rgba(4, 10, 22, 0.34);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 22px;
+  background: rgba(10, 14, 22, 0.68);
+  backdrop-filter: blur(14px);
 }
 
 .bookmark-board {
-  padding: 24px;
+  padding: 14px;
+}
+
+.customize-card {
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.section-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 4px 12px;
+}
+
+.section-heading.compact {
+  padding-bottom: 4px;
 }
 
 .board-title,
 .customize-title {
-  margin: 0 0 16px;
-  font-size: 14px;
-  letter-spacing: 0.08em;
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
+  color: rgba(230, 237, 243, 0.56);
+}
+
+.board-caption {
+  font-size: 12px;
   color: var(--text-dim);
+  white-space: nowrap;
 }
 
 .bookmark-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
 }
 
 .bookmark-card {
-  min-height: 110px;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
   text-align: left;
-  border: 1px solid rgba(56, 189, 248, 0.12);
-  border-radius: 20px;
-  background: rgba(16, 24, 40, 0.74);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.025);
   color: var(--text);
-  padding: 18px 16px;
+  padding: 12px 14px;
   cursor: pointer;
-  transition: transform 0.18s var(--ease-out), border-color 0.2s var(--ease-out), background 0.2s var(--ease-out);
+  transition: border-color 0.18s var(--ease-out), background 0.18s var(--ease-out), transform 0.14s var(--ease-out);
 }
 
 .bookmark-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(56, 189, 248, 0.32);
-  background: rgba(18, 30, 52, 0.86);
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.bookmark-card:active {
+  transform: scale(0.99);
 }
 
 .bookmark-icon {
-  width: 40px;
-  height: 40px;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 14px;
-  margin-bottom: 16px;
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.24), rgba(99, 102, 241, 0.22));
-  font-size: 15px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 12px;
   font-weight: 700;
-  color: #dff6ff;
+  color: rgba(230, 237, 243, 0.92);
+}
+
+.bookmark-meta {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .bookmark-name {
   display: block;
-  margin-bottom: 6px;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .bookmark-url {
   display: block;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-dim);
-  line-height: 1.4;
-}
-
-.customize-card {
-  padding: 24px;
-  display: grid;
-  gap: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .customize-body {
   display: none;
-  gap: 14px;
+  gap: 12px;
 }
 
 .customize-card.open .customize-body {
@@ -202,64 +254,67 @@
 
 .panel-label {
   display: grid;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--text-dim);
+  gap: 6px;
+  font-size: 11px;
+  color: rgba(230, 237, 243, 0.56);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
 }
 
 .panel-input {
   width: 100%;
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  background: rgba(8, 12, 24, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
   color: var(--text);
-  border-radius: 14px;
-  padding: 12px 14px;
+  border-radius: 12px;
+  padding: 11px 12px;
   font-size: 13px;
   outline: none;
-  transition: border-color 0.18s var(--ease-out), box-shadow 0.18s var(--ease-out);
+  transition: border-color 0.16s var(--ease-out), background 0.16s var(--ease-out), box-shadow 0.16s var(--ease-out);
 }
 
 .panel-input:focus {
-  border-color: rgba(56, 189, 248, 0.45);
-  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.26);
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.08);
 }
 
 .panel-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
 
 .panel-button {
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  border-radius: 14px;
-  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  padding: 10px 13px;
   font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
   cursor: pointer;
   color: var(--text);
-  background: rgba(15, 23, 42, 0.92);
-  transition: transform 0.16s var(--ease-out), border-color 0.18s var(--ease-out);
+  background: rgba(255, 255, 255, 0.04);
+  transition: border-color 0.16s var(--ease-out), background 0.16s var(--ease-out), transform 0.14s var(--ease-out);
 }
 
 .panel-button:hover {
-  transform: translateY(-1px);
-  border-color: rgba(56, 189, 248, 0.34);
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.panel-button:active {
+  transform: scale(0.98);
 }
 
 .panel-button.primary {
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.22), rgba(99, 102, 241, 0.2));
-  border-color: rgba(56, 189, 248, 0.28);
+  border-color: rgba(56, 189, 248, 0.24);
+  background: rgba(56, 189, 248, 0.12);
 }
 
 .bookmark-list {
   display: grid;
-  gap: 10px;
-  max-height: 240px;
+  gap: 8px;
+  max-height: 210px;
   overflow-y: auto;
 }
 
@@ -268,10 +323,10 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 12px 14px;
-  border-radius: 16px;
-  background: rgba(12, 18, 32, 0.78);
-  border: 1px solid rgba(148, 163, 184, 0.12);
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .bookmark-list-name {
@@ -280,29 +335,57 @@
 }
 
 .bookmark-list-url {
+  margin-top: 3px;
   font-size: 11px;
   color: var(--text-dim);
+  word-break: break-all;
 }
 
 .bookmark-delete {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
   border: none;
-  border-radius: 10px;
+  border-radius: 999px;
   cursor: pointer;
   color: #ffb4ad;
   background: rgba(248, 81, 73, 0.14);
 }
 
-.challenge-hint {
-  margin-top: 12px;
-  display: none;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  color: #dff6ff;
+@media (min-width: 840px) {
+  .home-grid {
+    grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.9fr);
+  }
 }
 
-.challenge-hint.visible {
-  display: inline-flex;
+@media (max-width: 640px) {
+  .tab-pane-home {
+    padding-top: 28px;
+  }
+
+  .home-time {
+    font-size: clamp(52px, 20vw, 84px);
+  }
+
+  .home-topbar,
+  .section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .board-caption {
+    white-space: normal;
+  }
+
+  .bookmark-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .panel-row {
+    flex-direction: column;
+  }
+
+  .panel-button {
+    width: 100%;
+  }
 }

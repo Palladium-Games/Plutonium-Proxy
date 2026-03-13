@@ -44,8 +44,10 @@ export function renderHomescreen(tab, { getHomeSettings }) {
         (bookmark, index) => `
           <button type="button" class="bookmark-card" data-bookmark-index="${index}">
             <span class="bookmark-icon">${escapeHtml(bookmark.accent)}</span>
-            <span class="bookmark-name">${escapeHtml(bookmark.name)}</span>
-            <span class="bookmark-url">${escapeHtml(new URL(bookmark.url).hostname)}</span>
+            <span class="bookmark-meta">
+              <span class="bookmark-name">${escapeHtml(bookmark.name)}</span>
+              <span class="bookmark-url">${escapeHtml(new URL(bookmark.url).hostname)}</span>
+            </span>
           </button>
         `
       )
@@ -99,14 +101,14 @@ export function createHomescreen(tab, options) {
   home.innerHTML = `
     <div class="home-shell">
       <div class="home-topbar">
+        <div class="home-brand">Plutonium</div>
         <button type="button" class="home-chip" data-action="toggle-customize">Customize</button>
       </div>
       <section class="home-hero">
-        <div class="home-brand">Plutonium</div>
         <div class="home-time" data-role="time"></div>
         <div class="home-date" data-role="date"></div>
         <div class="home-subtitle">
-          Launch into the web with your own launchpad. Keep your favorite places close, restore your last session on reload, and jump faster with a smarter omnibox that learns from your tabs and recent visits.
+          A quiet start page with saved places, a custom backdrop, and your last session ready to resume.
         </div>
         <div class="challenge-hint" data-role="challenge-hint">
           This page looks verification-heavy, but your Plutonium session stays with you while you browse.
@@ -114,13 +116,16 @@ export function createHomescreen(tab, options) {
       </section>
       <section class="home-grid">
         <div class="bookmark-board">
-          <h2 class="board-title">Launch Deck</h2>
+          <div class="section-heading">
+            <h2 class="board-title">Bookmarks</h2>
+            <div class="board-caption">Saved locally</div>
+          </div>
           <div class="bookmark-grid" data-role="bookmarks"></div>
         </div>
         <aside class="customize-card" data-role="customize-card">
-          <div>
+          <div class="section-heading compact">
             <h2 class="customize-title">Customize</h2>
-            <div class="home-subtitle">Backgrounds, bookmarks, and live browser state are all saved locally in Plutonium.</div>
+            <div class="board-caption">Background and shortcuts</div>
           </div>
           <div class="customize-body">
             <label class="panel-label">
