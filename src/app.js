@@ -17,6 +17,7 @@ import {
   rewriteCss,
   rewriteHtml,
   rewriteJs,
+  rewriteManifestJson,
   sanitizeProxyHeaders,
 } from "./proxy-utils.js";
 import {
@@ -161,7 +162,7 @@ function createProxyOptions(logger) {
           setProxyHeader(
             proxyReq,
             "accept",
-            "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8"
+            "text/html,application/xhtml+xml,application/xml;q=0.9,text/css,application/javascript,text/javascript,application/json;q=0.9,application/manifest+json,image/avif,image/webp,image/apng,image/svg+xml,*/*;q=0.8"
           );
         }
 
@@ -217,7 +218,10 @@ function handleProxyResponse(proxyRes, req, res) {
   const contentType = `${proxyRes.headers["content-type"] || ""}`.toLowerCase();
   const statusCode = proxyRes.statusCode || 200;
   const targetUrl = req.plutoniumTarget || "";
-  const rewriteable = isRewriteableContentType(contentType);
+  const rewriteable =
+    isRewriteableContentType(contentType) ||
+    isManifestLikeResponse(contentType, targetUrl) ||
+    isSvgLikeResponse(contentType, targetUrl);
 
   storeUpstreamCookies(req.plutoniumSessionId, targetUrl, proxyRes.headers["set-cookie"]);
   delete headers["set-cookie"];
@@ -295,17 +299,75 @@ function rewriteResponseBody(buffer, contentType, targetUrl) {
     return rewriteCss(buffer.toString("utf8"), targetUrl);
   }
 
-  if (
+  if (isManifestLikeResponse(contentType, targetUrl)) {
+    return rewriteManifestJson(buffer.toString("utf8"), targetUrl);
+  }
+
+  if (isSvgLikeResponse(contentType, targetUrl)) {
+    return rewriteHtml(buffer.toString("utf8"), targetUrl);
+  }
+
+  if (isJavaScriptContentType(contentType)) {
+    return rewriteJs(buffer.toString("utf8"), targetUrl);
+  }
+
+  return buffer;
+}
+
+/**
+ * Check whether the upstream response contains JavaScript that should be rewritten.
+ *
+ * @param {string} contentType Upstream content type.
+ * @returns {boolean} `true` when the body should be treated as JavaScript.
+ */
+function isJavaScriptContentType(contentType) {
+  return (
     contentType.includes("application/javascript") ||
     contentType.includes("application/x-javascript") ||
     contentType.includes("application/ecmascript") ||
     contentType.includes("text/ecmascript") ||
     contentType.includes("text/javascript")
-  ) {
-    return rewriteJs(buffer.toString("utf8"), targetUrl);
-  }
+  );
+}
 
-  return buffer;
+/**
+ * Check whether the response behaves like a web manifest even when the server
+ * sends a generic JSON content type.
+ *
+ * @param {string} contentType Upstream content type.
+ * @param {string} targetUrl Current upstream URL.
+ * @returns {boolean} `true` when the body should be treated as a manifest.
+ */
+function isManifestLikeResponse(contentType, targetUrl) {
+  return contentType.includes("application/manifest+json") || hasUrlExtension(targetUrl, ".webmanifest");
+}
+
+/**
+ * Check whether the response behaves like an SVG document even when the server
+ * omits the ideal SVG content type.
+ *
+ * @param {string} contentType Upstream content type.
+ * @param {string} targetUrl Current upstream URL.
+ * @returns {boolean} `true` when the body should be treated as SVG markup.
+ */
+function isSvgLikeResponse(contentType, targetUrl) {
+  return contentType.includes("image/svg+xml") || hasUrlExtension(targetUrl, ".svg");
+}
+
+/**
+ * Check the upstream path extension for responses that are commonly served with
+ * inconsistent content types.
+ *
+ * @param {string} targetUrl Current upstream URL.
+ * @param {string} extension File extension including the leading dot.
+ * @returns {boolean} `true` when the upstream URL ends with the given extension.
+ */
+function hasUrlExtension(targetUrl, extension) {
+  try {
+    return new URL(targetUrl).pathname.toLowerCase().endsWith(extension);
+  } catch {
+    return false;
+  }
 }
 
 /**

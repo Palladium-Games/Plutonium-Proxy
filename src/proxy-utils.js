@@ -111,6 +111,85 @@ function rewriteImportMapJson(scriptBody, baseUrl) {
 }
 
 /**
+ * Rewrite a web app manifest so entry points and icon URLs stay inside the local browser shell.
+ *
+ * @param {string} manifestJson Raw manifest JSON.
+ * @param {string} baseUrl Current upstream page URL.
+ * @returns {string} Rewritten manifest JSON.
+ */
+export function rewriteManifestJson(manifestJson, baseUrl) {
+  try {
+    const parsed = JSON.parse(manifestJson);
+
+    rewriteJsonUrlField(parsed, "start_url", baseUrl);
+    rewriteJsonUrlField(parsed, "scope", baseUrl);
+    rewriteJsonUrlField(parsed, "id", baseUrl);
+
+    rewriteJsonUrlArray(parsed.icons, "src", baseUrl);
+    rewriteJsonUrlArray(parsed.screenshots, "src", baseUrl);
+
+    if (Array.isArray(parsed.shortcuts)) {
+      parsed.shortcuts.forEach((shortcut) => {
+        rewriteJsonUrlField(shortcut, "url", baseUrl);
+        rewriteJsonUrlArray(shortcut?.icons, "src", baseUrl);
+      });
+    }
+
+    if (Array.isArray(parsed.protocol_handlers)) {
+      parsed.protocol_handlers.forEach((handler) => {
+        rewriteJsonUrlField(handler, "url", baseUrl);
+      });
+    }
+
+    if (Array.isArray(parsed.file_handlers)) {
+      parsed.file_handlers.forEach((handler) => {
+        rewriteJsonUrlField(handler, "action", baseUrl);
+      });
+    }
+
+    if (parsed.share_target && typeof parsed.share_target === "object") {
+      rewriteJsonUrlField(parsed.share_target, "action", baseUrl);
+    }
+
+    return JSON.stringify(parsed, null, 2);
+  } catch {
+    return manifestJson;
+  }
+}
+
+/**
+ * Rewrite one URL field inside a JSON object when present.
+ *
+ * @param {Record<string, unknown> | null | undefined} object Candidate object.
+ * @param {string} fieldName Target field name.
+ * @param {string} baseUrl Current upstream page URL.
+ * @returns {void}
+ */
+function rewriteJsonUrlField(object, fieldName, baseUrl) {
+  if (!object || typeof object !== "object" || typeof object[fieldName] !== "string") {
+    return;
+  }
+
+  object[fieldName] = toProxiedResolvedUrl(object[fieldName], baseUrl) || object[fieldName];
+}
+
+/**
+ * Rewrite one URL field across a JSON object array.
+ *
+ * @param {unknown} items Candidate object array.
+ * @param {string} fieldName Target field name.
+ * @param {string} baseUrl Current upstream page URL.
+ * @returns {void}
+ */
+function rewriteJsonUrlArray(items, fieldName, baseUrl) {
+  if (!Array.isArray(items)) {
+    return;
+  }
+
+  items.forEach((item) => rewriteJsonUrlField(item, fieldName, baseUrl));
+}
+
+/**
  * Resolve a URL-like value against a base URL.
  *
  * @param {string | undefined | null} urlStr Raw attribute value from HTML/CSS/JS.
@@ -198,6 +277,10 @@ export function extractTargetUrl(locationUrl) {
  */
 export function rewriteHtml(html, baseUrl) {
   const rewriteAttr = (match, attr, quote, value) => {
+    if (`${value}`.trim().startsWith(`${PROXY_PATH}?url=`)) {
+      return match;
+    }
+
     const proxyValue = toProxiedResolvedUrl(value, baseUrl);
     return proxyValue ? ` ${attr}=${quote}${proxyValue}${quote}` : match;
   };
@@ -205,6 +288,7 @@ export function rewriteHtml(html, baseUrl) {
   let rewritten = html
     .replace(/\s(href)=(["'])([^"']*)\2/gi, rewriteAttr)
     .replace(/\s(src)=(["'])([^"']*)\2/gi, rewriteAttr)
+    .replace(/\s(xlink:href)=(["'])([^"']*)\2/gi, rewriteAttr)
     .replace(/\s(action)=(["'])([^"']*)\2/gi, rewriteAttr)
     .replace(/\s(formaction)=(["'])([^"']*)\2/gi, rewriteAttr)
     .replace(/\s(data-src|data-href|data-action|data-poster)=(["'])([^"']*)\2/gi, rewriteAttr)
@@ -231,6 +315,17 @@ export function rewriteHtml(html, baseUrl) {
     }
   );
 
+  rewritten = rewritten.replace(
+    /<script\b([^>]*)type=(["'])module\2([^>]*)>([\s\S]*?)<\/script>/gi,
+    (match, beforeType, quote, afterType, scriptBody) => {
+      const attrs = `${beforeType}${afterType}`.toLowerCase();
+      if (/\ssrc=/.test(attrs)) {
+        return match;
+      }
+      return `<script${beforeType}type=${quote}module${quote}${afterType}>${rewriteJs(scriptBody, baseUrl)}</script>`;
+    }
+  );
+
   rewritten = rewritten.replace(/\scontent=(["'])([^"']+)\1/gi, (match, quote, value) => {
     const metaRefresh = value.match(/^(\d+\s*;\s*url=)(.+)$/i);
     if (!metaRefresh) {
@@ -254,13 +349,33 @@ export function rewriteHtml(html, baseUrl) {
 export function rewriteCss(css, baseUrl) {
   try {
     return css
-      .replace(/url\s*\(\s*["']?([^"')]+)["']?\s*\)/g, (match, rawUrl) => {
-        const proxyValue = toProxyAttr(resolveProxyUrl(rawUrl.trim(), baseUrl));
-        return proxyValue ? `url("${proxyValue}")` : match;
+      .replace(/@import\s+url\(\s*["']?([^"')]+)["']?\s*\)/g, (match, rawUrl) => {
+        if (`${rawUrl}`.trim().startsWith(`${PROXY_PATH}?url=`)) {
+          return match;
+        }
+
+        const proxyValue = toProxiedResolvedUrl(rawUrl.trim(), baseUrl);
+        return proxyValue ? `@import url("${proxyValue}")` : match;
       })
       .replace(/@import\s+["']([^"']+)["']/g, (match, rawUrl) => {
-        const proxyValue = toProxyAttr(resolveProxyUrl(rawUrl.trim(), baseUrl));
+        if (`${rawUrl}`.trim().startsWith(`${PROXY_PATH}?url=`)) {
+          return match;
+        }
+
+        const proxyValue = toProxiedResolvedUrl(rawUrl.trim(), baseUrl);
         return proxyValue ? `@import "${proxyValue}"` : match;
+      })
+      .replace(/\/\*[#@]\s*sourceMappingURL=([^*\s]+)\s*\*\//g, (match, rawUrl) => {
+        const proxyValue = toProxiedResolvedUrl(rawUrl.trim(), baseUrl);
+        return proxyValue ? `/*# sourceMappingURL=${proxyValue} */` : match;
+      })
+      .replace(/url\s*\(\s*["']?([^"')]+)["']?\s*\)/g, (match, rawUrl) => {
+        if (`${rawUrl}`.trim().startsWith(`${PROXY_PATH}?url=`)) {
+          return match;
+        }
+
+        const proxyValue = toProxiedResolvedUrl(rawUrl.trim(), baseUrl);
+        return proxyValue ? `url("${proxyValue}")` : match;
       });
   } catch {
     return css;
@@ -314,6 +429,14 @@ export function rewriteJs(js, baseUrl) {
           return proxyValue ? `${quote}${proxyValue}${quote}` : argMatch;
         });
         return `importScripts(${rewrittenArgs})`;
+      })
+      .replace(/\/\/[#@]\s*sourceMappingURL=([^\s]+)/g, (match, rawUrl) => {
+        const proxyValue = toProxiedResolvedUrl(rawUrl.trim(), baseUrl);
+        return proxyValue ? `//# sourceMappingURL=${proxyValue}` : match;
+      })
+      .replace(/\/\*[#@]\s*sourceMappingURL=([^*\s]+)\s*\*\//g, (match, rawUrl) => {
+        const proxyValue = toProxiedResolvedUrl(rawUrl.trim(), baseUrl);
+        return proxyValue ? `/*# sourceMappingURL=${proxyValue} */` : match;
       });
   } catch {
     return js;
@@ -366,6 +489,8 @@ export function isRewriteableContentType(contentType) {
   return (
     contentType.includes("text/html") ||
     contentType.includes("text/css") ||
+    contentType.includes("application/manifest+json") ||
+    contentType.includes("image/svg+xml") ||
     contentType.includes("application/javascript") ||
     contentType.includes("application/x-javascript") ||
     contentType.includes("application/ecmascript") ||
@@ -385,9 +510,15 @@ export function isCacheableAssetContentType(contentType) {
     contentType.includes("text/css") ||
     contentType.includes("application/javascript") ||
     contentType.includes("text/javascript") ||
+    contentType.includes("application/manifest+json") ||
+    contentType.includes("application/wasm") ||
+    contentType.includes("application/json") ||
+    contentType.includes("image/svg+xml") ||
     contentType.includes("image/") ||
     contentType.includes("font/") ||
     contentType.includes("application/font") ||
+    contentType.includes("application/xml") ||
+    contentType.includes("text/xml") ||
     contentType.includes("video/")
   );
 }

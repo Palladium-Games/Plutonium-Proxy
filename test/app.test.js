@@ -43,6 +43,7 @@ function createUpstreamServer() {
         <html>
           <head>
             <title>Example Home</title>
+            <link rel="manifest" href="/site.webmanifest">
             <link rel="preload" as="image" imagesrcset="/hero.png 1x, /hero@2x.png 2x" integrity="sha256-demo">
             <style>.hero { background-image: url("/panel.png"); }</style>
             <script type="importmap">
@@ -51,6 +52,9 @@ function createUpstreamServer() {
                   "#app": "/assets/app.js"
                 }
               }
+            </script>
+            <script type="module">
+              import "/inline-module.js";
             </script>
           </head>
           <body style="background-image: url('/wallpaper.png')">
@@ -64,7 +68,17 @@ function createUpstreamServer() {
 
     if (req.url === "/styles/site.css") {
       res.writeHead(200, { "content-type": "text/css; charset=utf-8" });
-      res.end('.hero { background: url("/hero.png"); }');
+      res.end(`
+        @import url("/styles/theme.css");
+        .hero { background: url("/hero.png"); }
+        /*# sourceMappingURL=site.css.map */
+      `);
+      return;
+    }
+
+    if (req.url === "/styles/theme.css") {
+      res.writeHead(200, { "content-type": "text/css; charset=utf-8" });
+      res.end(".theme { color: #fff; }");
       return;
     }
 
@@ -96,6 +110,32 @@ function createUpstreamServer() {
         import "/module.js";
         new Worker("/worker.js");
         navigator.serviceWorker.register("/sw.js", { scope: "/scope/" });
+        //# sourceMappingURL=app.js.map
+      `);
+      return;
+    }
+
+    if (req.url === "/site.webmanifest") {
+      res.writeHead(200, { "content-type": "application/json; charset=utf-8" });
+      res.end(
+        JSON.stringify({
+          name: "Example App",
+          start_url: "/launch",
+          scope: "/",
+          icons: [{ src: "/icons/app-192.png" }],
+          shortcuts: [{ name: "Inbox", url: "/inbox" }],
+        })
+      );
+      return;
+    }
+
+    if (req.url === "/logo.svg") {
+      res.writeHead(200, { "content-type": "image/svg+xml; charset=utf-8" });
+      res.end(`
+        <svg xmlns="http://www.w3.org/2000/svg">
+          <style>.logo { mask: url("/mask.svg"); }</style>
+          <use xlink:href="/sprite.svg#wordmark"></use>
+        </svg>
       `);
       return;
     }
@@ -156,11 +196,13 @@ test("proxy responds with rewritten HTML instead of hanging", async (t) => {
   assert.match(body, /imagesrcset="\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Fhero\.png 1x, \/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Fhero%402x\.png 2x"/);
   assert.match(body, /background-image: url\("\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Fpanel\.png"\)/);
   assert.match(body, /"#app": "\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Fassets%2Fapp\.js"/);
+  assert.match(body, /href="\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Fsite\.webmanifest"/);
+  assert.match(body, /import "\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Finline-module\.js"/);
   assert.doesNotMatch(body, /integrity=/);
   assert.match(body, /window\.__plutoniumFrameBridgeInstalled/);
 });
 
-test("proxy rewrites CSS and JavaScript assets", async (t) => {
+test("proxy rewrites CSS, JavaScript, manifest, and SVG assets", async (t) => {
   resetUpstreamCookieStores();
   const upstream = createUpstreamServer();
   const upstreamBaseUrl = await listen(upstream);
@@ -176,14 +218,30 @@ test("proxy rewrites CSS and JavaScript assets", async (t) => {
     `${proxyBaseUrl}/proxy?url=${encodeURIComponent(`${upstreamBaseUrl}/styles/site.css`)}`
   );
   const jsResponse = await fetch(`${proxyBaseUrl}/proxy?url=${encodeURIComponent(`${upstreamBaseUrl}/app.js`)}`);
+  const manifestResponse = await fetch(
+    `${proxyBaseUrl}/proxy?url=${encodeURIComponent(`${upstreamBaseUrl}/site.webmanifest`)}`
+  );
+  const svgResponse = await fetch(`${proxyBaseUrl}/proxy?url=${encodeURIComponent(`${upstreamBaseUrl}/logo.svg`)}`);
 
   assert.equal(cssResponse.status, 200);
   assert.equal(jsResponse.status, 200);
-  assert.match(await cssResponse.text(), /\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Fhero\.png/);
+  assert.equal(manifestResponse.status, 200);
+  assert.equal(svgResponse.status, 200);
+  const cssBody = await cssResponse.text();
+  assert.match(cssBody, /\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Fstyles%2Ftheme\.css/);
+  assert.match(cssBody, /\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Fhero\.png/);
+  assert.match(cssBody, /\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Fstyles%2Fsite\.css\.map/);
   const jsBody = await jsResponse.text();
   assert.match(jsBody, /import "\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Fmodule\.js"/);
   assert.match(jsBody, /new Worker\("\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Fworker\.js"/);
   assert.match(jsBody, /navigator\.serviceWorker\.register\("\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Fsw\.js"/);
+  assert.match(jsBody, /\/\/# sourceMappingURL=\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Fapp\.js\.map/);
+  const manifestBody = await manifestResponse.text();
+  assert.match(manifestBody, /"start_url": "\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Flaunch"/);
+  assert.match(manifestBody, /"src": "\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Ficons%2Fapp-192\.png"/);
+  const svgBody = await svgResponse.text();
+  assert.match(svgBody, /mask: url\("\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Fmask\.svg"\)/);
+  assert.match(svgBody, /xlink:href="\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Fsprite\.svg%23wordmark"/);
 });
 
 test("proxy handles HEAD requests and bad inputs cleanly", async (t) => {

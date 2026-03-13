@@ -8,6 +8,7 @@ import {
   rewriteCss,
   rewriteHtml,
   rewriteJs,
+  rewriteManifestJson,
   sanitizeProxyHeaders,
 } from "../src/proxy-utils.js";
 
@@ -47,6 +48,9 @@ test("rewriteHtml proxies common attributes and meta refresh targets", () => {
             }
           }
         </script>
+        <script type="module">
+          import "/modules/inline.js";
+        </script>
       </head>
       <body style="background-image: url('/body-bg.png')">
         <a href="/docs">Docs</a>
@@ -70,6 +74,7 @@ test("rewriteHtml proxies common attributes and meta refresh targets", () => {
   assert.match(rewritten, /style="background-image: url\(&quot;\/proxy\?url=https%3A%2F%2Fexample\.com%2Fbody-bg\.png&quot;\)"/);
   assert.match(rewritten, /"#app": "\/proxy\?url=https%3A%2F%2Fexample\.com%2Fassets%2Fapp\.js"/);
   assert.match(rewritten, /"\/proxy\?url=https%3A%2F%2Fexample\.com%2Fstart"/);
+  assert.match(rewritten, /import "\/proxy\?url=https%3A%2F%2Fexample\.com%2Fmodules%2Finline\.js"/);
   assert.doesNotMatch(rewritten, /integrity=/);
 });
 
@@ -81,7 +86,12 @@ test("rewriteHtml keeps top-targeted navigation inside the proxy iframe", () => 
 });
 
 test("rewriteCss and rewriteJs keep asset fetches inside the proxy", () => {
-  const css = '@import "/styles/site.css"; .hero { background-image: url("../img/hero.png"); }';
+  const css = `
+    @import "/styles/site.css";
+    @import url("/styles/theme.css");
+    .hero { background-image: url("../img/hero.png"); }
+    /*# sourceMappingURL=main.css.map */
+  `;
   const js = `
     import workerUrl from "/workers/main.js";
     export { helper } from "/modules/helper.js";
@@ -90,45 +100,82 @@ test("rewriteCss and rewriteJs keep asset fetches inside the proxy", () => {
     navigator.serviceWorker.register("/sw.js", { scope: "/scope/" });
     importScripts("/vendor/a.js", "/vendor/b.js");
     new EventSource("/events/live");
+    //# sourceMappingURL=client.js.map
   `;
 
+  const rewrittenCss = rewriteCss(css, "https://example.com/app/main.css");
+  const rewrittenJs = rewriteJs(js, "https://example.com/app/client.js");
+
   assert.match(
-    rewriteCss(css, "https://example.com/app/main.css"),
+    rewrittenCss,
     /\/proxy\?url=https%3A%2F%2Fexample\.com%2Fstyles%2Fsite\.css/
   );
   assert.match(
-    rewriteCss(css, "https://example.com/app/main.css"),
+    rewrittenCss,
+    /\/proxy\?url=https%3A%2F%2Fexample\.com%2Fstyles%2Ftheme\.css/
+  );
+  assert.match(
+    rewrittenCss,
     /\/proxy\?url=https%3A%2F%2Fexample\.com%2Fimg%2Fhero\.png/
   );
   assert.match(
-    rewriteJs(js, "https://example.com/app/client.js"),
+    rewrittenCss,
+    /\/proxy\?url=https%3A%2F%2Fexample\.com%2Fapp%2Fmain\.css\.map/
+  );
+  assert.match(
+    rewrittenJs,
     /import workerUrl from "\/proxy\?url=https%3A%2F%2Fexample\.com%2Fworkers%2Fmain\.js"/
   );
   assert.match(
-    rewriteJs(js, "https://example.com/app/client.js"),
+    rewrittenJs,
     /export \{ helper \} from "\/proxy\?url=https%3A%2F%2Fexample\.com%2Fmodules%2Fhelper\.js"/
   );
   assert.match(
-    rewriteJs(js, "https://example.com/app/client.js"),
+    rewrittenJs,
     /import\("\/proxy\?url=https%3A%2F%2Fexample\.com%2Fmodules%2Fdynamic\.js"\)/
   );
   assert.match(
-    rewriteJs(js, "https://example.com/app/client.js"),
+    rewrittenJs,
     /new Worker\("\/proxy\?url=https%3A%2F%2Fexample\.com%2Fworkers%2Fbackground\.js"/
   );
   assert.match(
-    rewriteJs(js, "https://example.com/app/client.js"),
+    rewrittenJs,
     /navigator\.serviceWorker\.register\("\/proxy\?url=https%3A%2F%2Fexample\.com%2Fsw\.js"/
   );
   assert.match(
-    rewriteJs(js, "https://example.com/app/client.js"),
+    rewrittenJs,
     /importScripts\("\/proxy\?url=https%3A%2F%2Fexample\.com%2Fvendor%2Fa\.js", "\/proxy\?url=https%3A%2F%2Fexample\.com%2Fvendor%2Fb\.js"\)/
   );
   assert.match(
-    rewriteJs(js, "https://example.com/app/client.js"),
+    rewrittenJs,
     /new EventSource\("\/proxy\?url=https%3A%2F%2Fexample\.com%2Fevents%2Flive"\)/
   );
+  assert.match(
+    rewrittenJs,
+    /\/\/# sourceMappingURL=\/proxy\?url=https%3A%2F%2Fexample\.com%2Fapp%2Fclient\.js\.map/
+  );
   assert.doesNotMatch(rewriteJs('export default "/logo.png";', "https://example.com/app/client.js"), /proxy\?url=/);
+});
+
+test("rewriteManifestJson and SVG-style hrefs keep metadata assets proxied", () => {
+  const manifest = JSON.stringify({
+    start_url: "/start",
+    scope: "/app/",
+    icons: [{ src: "/icons/app-192.png" }],
+    shortcuts: [{ url: "/shortcuts/inbox", icons: [{ src: "/icons/inbox.png" }] }],
+    share_target: { action: "/share" },
+  });
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg"><use xlink:href="/sprite.svg#mark"></use></svg>';
+
+  const rewrittenManifest = rewriteManifestJson(manifest, "https://example.com/app/site.webmanifest");
+  const rewrittenSvg = rewriteHtml(svg, "https://example.com/app/logo.svg");
+
+  assert.match(rewrittenManifest, /"start_url": "\/proxy\?url=https%3A%2F%2Fexample\.com%2Fstart"/);
+  assert.match(rewrittenManifest, /"scope": "\/proxy\?url=https%3A%2F%2Fexample\.com%2Fapp%2F"/);
+  assert.match(rewrittenManifest, /"src": "\/proxy\?url=https%3A%2F%2Fexample\.com%2Ficons%2Fapp-192\.png"/);
+  assert.match(rewrittenManifest, /"url": "\/proxy\?url=https%3A%2F%2Fexample\.com%2Fshortcuts%2Finbox"/);
+  assert.match(rewrittenManifest, /"action": "\/proxy\?url=https%3A%2F%2Fexample\.com%2Fshare"/);
+  assert.match(rewrittenSvg, /xlink:href="\/proxy\?url=https%3A%2F%2Fexample\.com%2Fsprite\.svg%23mark"/);
 });
 
 test("buildFrameHelperScript and sanitizeProxyHeaders lock down iframe integration behavior", () => {

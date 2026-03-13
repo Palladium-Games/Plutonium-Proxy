@@ -17,7 +17,7 @@
 1. The shell navigates an iframe to `/proxy?url=<target>`.
 2. [`src/app.js`](/Users/sethpang/Coding/Plutonium%20Proxy/src/app.js) validates the target, maps local headers back to the upstream origin, proxies the request upstream, and decides whether the response must be streamed or buffered.
 3. [`src/upstream-cookies.js`](/Users/sethpang/Coding/Plutonium%20Proxy/src/upstream-cookies.js) captures upstream `Set-Cookie` headers and replays matching cookies on later requests for the same local browser session.
-4. [`src/proxy-utils.js`](/Users/sethpang/Coding/Plutonium%20Proxy/src/proxy-utils.js) rewrites navigational URLs back through the proxy, handles inline CSS/import-map/module/worker compatibility fixes, and injects the bridge script into HTML responses.
+4. [`src/proxy-utils.js`](/Users/sethpang/Coding/Plutonium%20Proxy/src/proxy-utils.js) rewrites navigational URLs back through the proxy, handles inline CSS/import-map/module/worker compatibility fixes plus manifests, SVG markup, and source-map-linked assets, and injects the bridge script into HTML responses.
 5. The injected bridge rewrites programmatic navigations plus fetch/XHR/EventSource/Worker/service-worker registration requests, then posts `loading`, `title`, and `commit` messages to the shell so the UI stays synchronized with in-page navigation.
 6. [`public/scripts/plutonium-app.js`](/Users/sethpang/Coding/Plutonium%20Proxy/public/scripts/plutonium-app.js) restores the last browser session, keeps recent/closed tab state synchronized to local storage, and powers omnibox suggestions plus duplicate/reopen shortcuts.
 
