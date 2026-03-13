@@ -109,7 +109,7 @@ export function createHomescreen(tab, options) {
           Launch into the web with your own launchpad. Keep your favorite places close, restore your last session on reload, and jump faster with a smarter omnibox that learns from your tabs and recent visits.
         </div>
         <div class="challenge-hint" data-role="challenge-hint">
-          This page looks verification-heavy, but the proxy session stays with you while you browse.
+          This page looks verification-heavy, but your Plutonium session stays with you while you browse.
         </div>
       </section>
       <section class="home-grid">

@@ -10,6 +10,107 @@ export const FRAME_EVENT_SOURCE = "plutonium-frame";
 const SKIPPED_PROTOCOLS = ["javascript:", "data:", "mailto:", "blob:"];
 
 /**
+ * Resolve an upstream URL and convert it into the local proxy route.
+ *
+ * @param {string | undefined | null} rawUrl Candidate upstream URL.
+ * @param {string} baseUrl Absolute page URL used for resolution.
+ * @returns {string | null} Proxied route or `null` when the URL should be left untouched.
+ */
+function toProxiedResolvedUrl(rawUrl, baseUrl) {
+  let resolved = resolveProxyUrl(rawUrl, baseUrl);
+  if (resolved) {
+    resolved = normalizeGoogleSearchUrl(resolved);
+  }
+
+  return toProxyAttr(resolved);
+}
+
+/**
+ * Rewrite a srcset-style attribute value into proxied URLs.
+ *
+ * @param {string} value Raw srcset value.
+ * @param {string} baseUrl Current upstream page URL.
+ * @returns {string} Rewritten srcset value.
+ */
+function rewriteSrcsetValue(value, baseUrl) {
+  return value
+    .split(/,\s*/)
+    .map((part) => {
+      const [rawUrl, ...descriptorParts] = part.trim().split(/\s+/);
+      const proxyValue = toProxiedResolvedUrl(rawUrl, baseUrl);
+      if (!proxyValue) {
+        return part;
+      }
+
+      return [proxyValue, ...descriptorParts].join(" ").trim();
+    })
+    .join(", ");
+}
+
+/**
+ * Escape an HTML attribute value after inline CSS rewriting.
+ *
+ * @param {string} value Rewritten attribute value.
+ * @param {'"' | "'"} quote Quote character that will wrap the value.
+ * @returns {string} Safe attribute text.
+ */
+function escapeAttributeValue(value, quote) {
+  if (quote === '"') {
+    return value.replace(/"/g, "&quot;");
+  }
+
+  return value.replace(/'/g, "&#39;");
+}
+
+/**
+ * Rewrite an import map payload so module URLs stay inside the local browser shell.
+ *
+ * @param {string} scriptBody Raw import map JSON.
+ * @param {string} baseUrl Current upstream page URL.
+ * @returns {string} Rewritten import map JSON.
+ */
+function rewriteImportMapJson(scriptBody, baseUrl) {
+  try {
+    const parsed = JSON.parse(scriptBody);
+
+    if (parsed.imports && typeof parsed.imports === "object") {
+      for (const key of Object.keys(parsed.imports)) {
+        if (typeof parsed.imports[key] === "string") {
+          parsed.imports[key] = toProxiedResolvedUrl(parsed.imports[key], baseUrl) || parsed.imports[key];
+        }
+      }
+    }
+
+    if (parsed.scopes && typeof parsed.scopes === "object") {
+      const rewrittenScopes = {};
+      for (const scopeKey of Object.keys(parsed.scopes)) {
+        const rewrittenScopeKey = toProxiedResolvedUrl(scopeKey, baseUrl) || scopeKey;
+        const scopeImports = parsed.scopes[scopeKey];
+        if (!scopeImports || typeof scopeImports !== "object") {
+          rewrittenScopes[rewrittenScopeKey] = scopeImports;
+          continue;
+        }
+
+        rewrittenScopes[rewrittenScopeKey] = {};
+        for (const importKey of Object.keys(scopeImports)) {
+          const importTarget = scopeImports[importKey];
+          rewrittenScopes[rewrittenScopeKey][importKey] =
+            typeof importTarget === "string"
+              ? toProxiedResolvedUrl(importTarget, baseUrl) || importTarget
+              : importTarget;
+        }
+      }
+
+      parsed.scopes = rewrittenScopes;
+    }
+
+    return JSON.stringify(parsed, null, 2);
+  } catch {
+    return scriptBody;
+  }
+}
+
+/**
  * Resolve a URL-like value against a base URL.
  *
  * @param {string | undefined | null} urlStr Raw attribute value from HTML/CSS/JS.
@@ -97,12 +198,7 @@ export function extractTargetUrl(locationUrl) {
  */
 export function rewriteHtml(html, baseUrl) {
   const rewriteAttr = (match, attr, quote, value) => {
-    let resolved = resolveProxyUrl(value, baseUrl);
-    if (resolved) {
-      resolved = normalizeGoogleSearchUrl(resolved);
-    }
-
-    const proxyValue = toProxyAttr(resolved);
+    const proxyValue = toProxiedResolvedUrl(value, baseUrl);
     return proxyValue ? ` ${attr}=${quote}${proxyValue}${quote}` : match;
   };
 
@@ -111,27 +207,29 @@ export function rewriteHtml(html, baseUrl) {
     .replace(/\s(src)=(["'])([^"']*)\2/gi, rewriteAttr)
     .replace(/\s(action)=(["'])([^"']*)\2/gi, rewriteAttr)
     .replace(/\s(formaction)=(["'])([^"']*)\2/gi, rewriteAttr)
+    .replace(/\s(data-src|data-href|data-action|data-poster)=(["'])([^"']*)\2/gi, rewriteAttr)
     .replace(/\s(poster)=(["'])([^"']*)\2/gi, rewriteAttr)
+    .replace(/\s(integrity)=(["'])[^"']*\2/gi, "")
     .replace(/\s(target)=(["'])(_top|_parent)\2/gi, ' target=$2_self$2');
 
-  rewritten = rewritten.replace(/\s(srcset)=(["'])([^"']+)\2/gi, (match, attr, quote, value) => {
-    const parts = value.split(/,\s*/).map((part) => {
-      const [rawUrl, ...descriptorParts] = part.trim().split(/\s+/);
-      let resolved = resolveProxyUrl(rawUrl, baseUrl);
-      if (resolved) {
-        resolved = normalizeGoogleSearchUrl(resolved);
-      }
-
-      const proxyValue = toProxyAttr(resolved);
-      if (!proxyValue) {
-        return part;
-      }
-
-      return [proxyValue, ...descriptorParts].join(" ").trim();
-    });
-
-    return ` ${attr}=${quote}${parts.join(", ")}${quote}`;
+  rewritten = rewritten.replace(/\s(srcset|imagesrcset|data-srcset)=(["'])([^"']+)\2/gi, (match, attr, quote, value) => {
+    return ` ${attr}=${quote}${rewriteSrcsetValue(value, baseUrl)}${quote}`;
   });
+
+  rewritten = rewritten.replace(/\s(style)=(["'])([\s\S]*?)\2/gi, (match, attr, quote, value) => {
+    return ` ${attr}=${quote}${escapeAttributeValue(rewriteCss(value, baseUrl), quote)}${quote}`;
+  });
+
+  rewritten = rewritten.replace(/<style\b([^>]*)>([\s\S]*?)<\/style>/gi, (match, attrs, cssText) => {
+    return `<style${attrs}>${rewriteCss(cssText, baseUrl)}</style>`;
+  });
+
+  rewritten = rewritten.replace(
+    /<script\b([^>]*)type=(["'])importmap\2([^>]*)>([\s\S]*?)<\/script>/gi,
+    (match, beforeType, quote, afterType, scriptBody) => {
+      return `<script${beforeType}type=${quote}importmap${quote}${afterType}>${rewriteImportMapJson(scriptBody, baseUrl)}</script>`;
+    }
+  );
 
   rewritten = rewritten.replace(/\scontent=(["'])([^"']+)\1/gi, (match, quote, value) => {
     const metaRefresh = value.match(/^(\d+\s*;\s*url=)(.+)$/i);
@@ -139,12 +237,7 @@ export function rewriteHtml(html, baseUrl) {
       return match;
     }
 
-    let resolved = resolveProxyUrl(metaRefresh[2], baseUrl);
-    if (resolved) {
-      resolved = normalizeGoogleSearchUrl(resolved);
-    }
-
-    const proxyValue = toProxyAttr(resolved);
+    const proxyValue = toProxiedResolvedUrl(metaRefresh[2], baseUrl);
     return proxyValue ? ` content=${quote}${metaRefresh[1]}${proxyValue}${quote}` : match;
   });
 
@@ -184,10 +277,44 @@ export function rewriteCss(css, baseUrl) {
  */
 export function rewriteJs(js, baseUrl) {
   try {
-    return js.replace(/(["'])(\/(?!\/)[^"'\s]*)\1/g, (match, quote, pathValue) => {
-      const proxyValue = toProxyAttr(resolveProxyUrl(pathValue, baseUrl));
-      return proxyValue ? `${quote}${proxyValue}${quote}` : match;
-    });
+    return js
+      .replace(/(\bimport\s+)(["'])([^"']+)\2/g, (match, prefix, quote, specifier) => {
+        const proxyValue = toProxiedResolvedUrl(specifier, baseUrl);
+        return proxyValue ? `${prefix}${quote}${proxyValue}${quote}` : match;
+      })
+      .replace(/(\bimport\b[\s\S]*?\bfrom\s*)(["'])([^"']+)\2/g, (match, prefix, quote, specifier) => {
+        const proxyValue = toProxiedResolvedUrl(specifier, baseUrl);
+        return proxyValue ? `${prefix}${quote}${proxyValue}${quote}` : match;
+      })
+      .replace(/(\bexport\b[\s\S]*?\bfrom\s*)(["'])([^"']+)\2/g, (match, prefix, quote, specifier) => {
+        const proxyValue = toProxiedResolvedUrl(specifier, baseUrl);
+        return proxyValue ? `${prefix}${quote}${proxyValue}${quote}` : match;
+      })
+      .replace(/(\bimport\s*\(\s*)(["'])([^"']+)\2(\s*\))/g, (match, prefix, quote, specifier, suffix) => {
+        const proxyValue = toProxiedResolvedUrl(specifier, baseUrl);
+        return proxyValue ? `${prefix}${quote}${proxyValue}${quote}${suffix}` : match;
+      })
+      .replace(
+        /(\bnew\s+(?:Worker|SharedWorker|EventSource)\s*\(\s*)(["'])([^"']+)\2/g,
+        (match, prefix, quote, requestUrl) => {
+          const proxyValue = toProxiedResolvedUrl(requestUrl, baseUrl);
+          return proxyValue ? `${prefix}${quote}${proxyValue}${quote}` : match;
+        }
+      )
+      .replace(
+        /(\bnavigator\.serviceWorker\.register\s*\(\s*)(["'])([^"']+)\2/g,
+        (match, prefix, quote, requestUrl) => {
+          const proxyValue = toProxiedResolvedUrl(requestUrl, baseUrl);
+          return proxyValue ? `${prefix}${quote}${proxyValue}${quote}` : match;
+        }
+      )
+      .replace(/\bimportScripts\s*\(([^)]*)\)/g, (match, argsText) => {
+        const rewrittenArgs = argsText.replace(/(["'])([^"']+)\1/g, (argMatch, quote, requestUrl) => {
+          const proxyValue = toProxiedResolvedUrl(requestUrl, baseUrl);
+          return proxyValue ? `${quote}${proxyValue}${quote}` : argMatch;
+        });
+        return `importScripts(${rewrittenArgs})`;
+      });
   } catch {
     return js;
   }
@@ -210,13 +337,21 @@ export function sanitizeProxyHeaders(sourceHeaders = {}) {
 
   const contentSecurityPolicy = headers["content-security-policy"];
   if (typeof contentSecurityPolicy === "string") {
-    const cleaned = contentSecurityPolicy.replace(/frame-ancestors[^;]*;?/gi, "").trim();
+    const cleaned = contentSecurityPolicy
+      .replace(/frame-ancestors[^;]*;?/gi, "")
+      .replace(/report-uri[^;]*;?/gi, "")
+      .replace(/report-to[^;]*;?/gi, "")
+      .replace(/sandbox[^;]*;?/gi, "")
+      .replace(/navigate-to[^;]*;?/gi, "")
+      .trim();
     if (cleaned) {
       headers["content-security-policy"] = cleaned;
     } else {
       delete headers["content-security-policy"];
     }
   }
+
+  delete headers["content-security-policy-report-only"];
 
   return headers;
 }
@@ -232,6 +367,9 @@ export function isRewriteableContentType(contentType) {
     contentType.includes("text/html") ||
     contentType.includes("text/css") ||
     contentType.includes("application/javascript") ||
+    contentType.includes("application/x-javascript") ||
+    contentType.includes("application/ecmascript") ||
+    contentType.includes("text/ecmascript") ||
     contentType.includes("text/javascript")
   );
 }
@@ -368,6 +506,70 @@ export function buildFrameHelperScript(targetUrl) {
     }
   }
 
+  function rewriteNodeTree(root) {
+    if (!root || typeof root.querySelectorAll !== "function") {
+      return;
+    }
+
+    if (typeof root.matches === "function") {
+      if (root.matches("a[href]")) {
+        rewriteAnchor(root);
+      }
+      if (root.matches("form[action], form[target]")) {
+        rewriteForm(root);
+      }
+      if (root.matches("[srcset]")) {
+        var rootSrcset = root.getAttribute("srcset");
+        if (rootSrcset) {
+          var rootSrcsetParts = rootSrcset.split(/,\s*/).map(function (part) {
+            var tokens = part.trim().split(/\s+/);
+            var proxied = toProxyUrl(tokens[0]);
+            return proxied ? [proxied].concat(tokens.slice(1)).join(" ").trim() : part;
+          });
+          root.setAttribute("srcset", rootSrcsetParts.join(", "));
+        }
+      }
+      if (root.matches("[imagesrcset]")) {
+        var rootImageSrcset = root.getAttribute("imagesrcset");
+        if (rootImageSrcset) {
+          var rootImageParts = rootImageSrcset.split(/,\s*/).map(function (part) {
+            var tokens = part.trim().split(/\s+/);
+            var proxied = toProxyUrl(tokens[0]);
+            return proxied ? [proxied].concat(tokens.slice(1)).join(" ").trim() : part;
+          });
+          root.setAttribute("imagesrcset", rootImageParts.join(", "));
+        }
+      }
+    }
+
+    root.querySelectorAll("a[href]").forEach(rewriteAnchor);
+    root.querySelectorAll("form[action], form[target]").forEach(rewriteForm);
+
+    root.querySelectorAll("[srcset]").forEach(function (element) {
+      var srcset = element.getAttribute("srcset");
+      if (srcset) {
+        var parts = srcset.split(/,\s*/).map(function (part) {
+          var tokens = part.trim().split(/\s+/);
+          var proxied = toProxyUrl(tokens[0]);
+          return proxied ? [proxied].concat(tokens.slice(1)).join(" ").trim() : part;
+        });
+        element.setAttribute("srcset", parts.join(", "));
+      }
+    });
+
+    root.querySelectorAll("[imagesrcset]").forEach(function (element) {
+      var imageSrcset = element.getAttribute("imagesrcset");
+      if (imageSrcset) {
+        var imageParts = imageSrcset.split(/,\s*/).map(function (part) {
+          var tokens = part.trim().split(/\s+/);
+          var proxied = toProxyUrl(tokens[0]);
+          return proxied ? [proxied].concat(tokens.slice(1)).join(" ").trim() : part;
+        });
+        element.setAttribute("imagesrcset", imageParts.join(", "));
+      }
+    });
+  }
+
   try {
     Object.defineProperty(window, "top", {
       get: function () {
@@ -431,6 +633,44 @@ export function buildFrameHelperScript(targetUrl) {
     };
   }
 
+  if (typeof window.EventSource === "function") {
+    var OriginalEventSource = window.EventSource;
+    window.EventSource = function (requestUrl, eventSourceInitDict) {
+      return new OriginalEventSource(toProxyUrl(requestUrl) || requestUrl, eventSourceInitDict);
+    };
+    window.EventSource.prototype = OriginalEventSource.prototype;
+  }
+
+  if (typeof window.Worker === "function") {
+    var OriginalWorker = window.Worker;
+    window.Worker = function (requestUrl, options) {
+      return new OriginalWorker(toProxyUrl(requestUrl) || requestUrl, options);
+    };
+    window.Worker.prototype = OriginalWorker.prototype;
+  }
+
+  if (typeof window.SharedWorker === "function") {
+    var OriginalSharedWorker = window.SharedWorker;
+    window.SharedWorker = function (requestUrl, options) {
+      return new OriginalSharedWorker(toProxyUrl(requestUrl) || requestUrl, options);
+    };
+    window.SharedWorker.prototype = OriginalSharedWorker.prototype;
+  }
+
+  if (navigator && navigator.serviceWorker && typeof navigator.serviceWorker.register === "function") {
+    var originalRegisterServiceWorker = navigator.serviceWorker.register.bind(navigator.serviceWorker);
+    navigator.serviceWorker.register = function (scriptUrl, options) {
+      var nextOptions = options;
+      if (options && typeof options === "object" && options.scope) {
+        nextOptions = Object.assign({}, options, {
+          scope: toProxyUrl(options.scope) || options.scope
+        });
+      }
+
+      return originalRegisterServiceWorker(toProxyUrl(scriptUrl) || scriptUrl, nextOptions);
+    };
+  }
+
   if (window.XMLHttpRequest && window.XMLHttpRequest.prototype) {
     var originalXhrOpen = window.XMLHttpRequest.prototype.open;
     window.XMLHttpRequest.prototype.open = function (method, requestUrl) {
@@ -463,7 +703,31 @@ export function buildFrameHelperScript(targetUrl) {
     if (titleElement) {
       titleObserver.observe(titleElement, { childList: true, subtree: true, characterData: true });
     }
+
+    var rewriteObserver = new MutationObserver(function (mutations) {
+      mutations.forEach(function (mutation) {
+        if (mutation.type === "childList") {
+          mutation.addedNodes.forEach(function (node) {
+            if (node && node.nodeType === 1) {
+              rewriteNodeTree(node);
+            }
+          });
+        }
+
+        if (mutation.type === "attributes" && mutation.target && mutation.target.nodeType === 1) {
+          rewriteNodeTree(mutation.target);
+        }
+      });
+    });
+    rewriteObserver.observe(document.documentElement || document, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ["href", "src", "srcset", "imagesrcset", "action", "target"]
+    });
   }
+
+  rewriteNodeTree(document);
 
   document.addEventListener("click", function (event) {
     var target = event.target;

@@ -43,8 +43,17 @@ function createUpstreamServer() {
         <html>
           <head>
             <title>Example Home</title>
+            <link rel="preload" as="image" imagesrcset="/hero.png 1x, /hero@2x.png 2x" integrity="sha256-demo">
+            <style>.hero { background-image: url("/panel.png"); }</style>
+            <script type="importmap">
+              {
+                "imports": {
+                  "#app": "/assets/app.js"
+                }
+              }
+            </script>
           </head>
-          <body>
+          <body style="background-image: url('/wallpaper.png')">
             <a href="/docs">Docs</a>
             <img src="/hero.png">
           </body>
@@ -83,7 +92,11 @@ function createUpstreamServer() {
 
     if (req.url === "/app.js") {
       res.writeHead(200, { "content-type": "application/javascript; charset=utf-8" });
-      res.end('fetch("/api/data");');
+      res.end(`
+        import "/module.js";
+        new Worker("/worker.js");
+        navigator.serviceWorker.register("/sw.js", { scope: "/scope/" });
+      `);
       return;
     }
 
@@ -140,6 +153,10 @@ test("proxy responds with rewritten HTML instead of hanging", async (t) => {
   const body = await response.text();
   assert.match(body, /href="\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Fdocs"/);
   assert.match(body, /src="\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Fhero\.png"/);
+  assert.match(body, /imagesrcset="\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Fhero\.png 1x, \/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Fhero%402x\.png 2x"/);
+  assert.match(body, /background-image: url\("\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Fpanel\.png"\)/);
+  assert.match(body, /"#app": "\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Fassets%2Fapp\.js"/);
+  assert.doesNotMatch(body, /integrity=/);
   assert.match(body, /window\.__plutoniumFrameBridgeInstalled/);
 });
 
@@ -163,7 +180,10 @@ test("proxy rewrites CSS and JavaScript assets", async (t) => {
   assert.equal(cssResponse.status, 200);
   assert.equal(jsResponse.status, 200);
   assert.match(await cssResponse.text(), /\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Fhero\.png/);
-  assert.match(await jsResponse.text(), /fetch\("\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Fapi%2Fdata"\)/);
+  const jsBody = await jsResponse.text();
+  assert.match(jsBody, /import "\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Fmodule\.js"/);
+  assert.match(jsBody, /new Worker\("\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Fworker\.js"/);
+  assert.match(jsBody, /navigator\.serviceWorker\.register\("\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Fsw\.js"/);
 });
 
 test("proxy handles HEAD requests and bad inputs cleanly", async (t) => {

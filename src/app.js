@@ -295,7 +295,13 @@ function rewriteResponseBody(buffer, contentType, targetUrl) {
     return rewriteCss(buffer.toString("utf8"), targetUrl);
   }
 
-  if (contentType.includes("application/javascript") || contentType.includes("text/javascript")) {
+  if (
+    contentType.includes("application/javascript") ||
+    contentType.includes("application/x-javascript") ||
+    contentType.includes("application/ecmascript") ||
+    contentType.includes("text/ecmascript") ||
+    contentType.includes("text/javascript")
+  ) {
     return rewriteJs(buffer.toString("utf8"), targetUrl);
   }
 

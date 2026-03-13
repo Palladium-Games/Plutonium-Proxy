@@ -33,10 +33,25 @@ test("rewriteHtml proxies common attributes and meta refresh targets", () => {
     <html>
       <head>
         <meta http-equiv="refresh" content="0;url=/next">
+        <link rel="preload" as="image" imagesrcset="/hero.png 1x, /hero@2x.png 2x" integrity="sha256-demo">
+        <style>.hero { background-image: url("/inline-bg.png"); }</style>
+        <script type="importmap">
+          {
+            "imports": {
+              "#app": "/assets/app.js"
+            },
+            "scopes": {
+              "https://example.com/start": {
+                "#scoped": "/assets/scoped.js"
+              }
+            }
+          }
+        </script>
       </head>
-      <body>
+      <body style="background-image: url('/body-bg.png')">
         <a href="/docs">Docs</a>
         <img src="/hero.png" srcset="/hero.png 1x, /hero@2x.png 2x">
+        <div data-src="/lazy.png"></div>
         <form action="/submit"></form>
       </body>
     </html>
@@ -47,8 +62,15 @@ test("rewriteHtml proxies common attributes and meta refresh targets", () => {
   assert.match(rewritten, /href="\/proxy\?url=https%3A%2F%2Fexample\.com%2Fdocs"/);
   assert.match(rewritten, /src="\/proxy\?url=https%3A%2F%2Fexample\.com%2Fhero\.png"/);
   assert.match(rewritten, /srcset="\/proxy\?url=https%3A%2F%2Fexample\.com%2Fhero\.png 1x, \/proxy\?url=https%3A%2F%2Fexample\.com%2Fhero%402x\.png 2x"/);
+  assert.match(rewritten, /imagesrcset="\/proxy\?url=https%3A%2F%2Fexample\.com%2Fhero\.png 1x, \/proxy\?url=https%3A%2F%2Fexample\.com%2Fhero%402x\.png 2x"/);
   assert.match(rewritten, /action="\/proxy\?url=https%3A%2F%2Fexample\.com%2Fsubmit"/);
+  assert.match(rewritten, /data-src="\/proxy\?url=https%3A%2F%2Fexample\.com%2Flazy\.png"/);
   assert.match(rewritten, /content="0;url=\/proxy\?url=https%3A%2F%2Fexample\.com%2Fnext"/);
+  assert.match(rewritten, /background-image: url\("\/proxy\?url=https%3A%2F%2Fexample\.com%2Finline-bg\.png"\)/);
+  assert.match(rewritten, /style="background-image: url\(&quot;\/proxy\?url=https%3A%2F%2Fexample\.com%2Fbody-bg\.png&quot;\)"/);
+  assert.match(rewritten, /"#app": "\/proxy\?url=https%3A%2F%2Fexample\.com%2Fassets%2Fapp\.js"/);
+  assert.match(rewritten, /"\/proxy\?url=https%3A%2F%2Fexample\.com%2Fstart"/);
+  assert.doesNotMatch(rewritten, /integrity=/);
 });
 
 test("rewriteHtml keeps top-targeted navigation inside the proxy iframe", () => {
@@ -60,7 +82,15 @@ test("rewriteHtml keeps top-targeted navigation inside the proxy iframe", () => 
 
 test("rewriteCss and rewriteJs keep asset fetches inside the proxy", () => {
   const css = '@import "/styles/site.css"; .hero { background-image: url("../img/hero.png"); }';
-  const js = 'fetch("/api/data"); const login = "/auth/login";';
+  const js = `
+    import workerUrl from "/workers/main.js";
+    export { helper } from "/modules/helper.js";
+    import("/modules/dynamic.js");
+    new Worker("/workers/background.js");
+    navigator.serviceWorker.register("/sw.js", { scope: "/scope/" });
+    importScripts("/vendor/a.js", "/vendor/b.js");
+    new EventSource("/events/live");
+  `;
 
   assert.match(
     rewriteCss(css, "https://example.com/app/main.css"),
@@ -72,18 +102,41 @@ test("rewriteCss and rewriteJs keep asset fetches inside the proxy", () => {
   );
   assert.match(
     rewriteJs(js, "https://example.com/app/client.js"),
-    /fetch\("\/proxy\?url=https%3A%2F%2Fexample\.com%2Fapi%2Fdata"\)/
+    /import workerUrl from "\/proxy\?url=https%3A%2F%2Fexample\.com%2Fworkers%2Fmain\.js"/
   );
   assert.match(
     rewriteJs(js, "https://example.com/app/client.js"),
-    /"\/proxy\?url=https%3A%2F%2Fexample\.com%2Fauth%2Flogin"/
+    /export \{ helper \} from "\/proxy\?url=https%3A%2F%2Fexample\.com%2Fmodules%2Fhelper\.js"/
   );
+  assert.match(
+    rewriteJs(js, "https://example.com/app/client.js"),
+    /import\("\/proxy\?url=https%3A%2F%2Fexample\.com%2Fmodules%2Fdynamic\.js"\)/
+  );
+  assert.match(
+    rewriteJs(js, "https://example.com/app/client.js"),
+    /new Worker\("\/proxy\?url=https%3A%2F%2Fexample\.com%2Fworkers%2Fbackground\.js"/
+  );
+  assert.match(
+    rewriteJs(js, "https://example.com/app/client.js"),
+    /navigator\.serviceWorker\.register\("\/proxy\?url=https%3A%2F%2Fexample\.com%2Fsw\.js"/
+  );
+  assert.match(
+    rewriteJs(js, "https://example.com/app/client.js"),
+    /importScripts\("\/proxy\?url=https%3A%2F%2Fexample\.com%2Fvendor%2Fa\.js", "\/proxy\?url=https%3A%2F%2Fexample\.com%2Fvendor%2Fb\.js"\)/
+  );
+  assert.match(
+    rewriteJs(js, "https://example.com/app/client.js"),
+    /new EventSource\("\/proxy\?url=https%3A%2F%2Fexample\.com%2Fevents%2Flive"\)/
+  );
+  assert.doesNotMatch(rewriteJs('export default "/logo.png";', "https://example.com/app/client.js"), /proxy\?url=/);
 });
 
 test("buildFrameHelperScript and sanitizeProxyHeaders lock down iframe integration behavior", () => {
   const helper = buildFrameHelperScript("https://example.com/inside");
   const headers = sanitizeProxyHeaders({
-    "content-security-policy": "default-src 'self'; frame-ancestors 'none'; object-src 'none'",
+    "content-security-policy":
+      "default-src 'self'; frame-ancestors 'none'; sandbox allow-scripts; report-uri /csp; report-to csp-endpoint; navigate-to 'self'; object-src 'none'",
+    "content-security-policy-report-only": "default-src 'self'",
     "x-frame-options": "DENY",
     "strict-transport-security": "max-age=31536000",
     "content-length": "123",
@@ -93,8 +146,12 @@ test("buildFrameHelperScript and sanitizeProxyHeaders lock down iframe integrati
   assert.match(helper, /https:\/\/example\.com\/inside/);
   assert.match(helper, /window\.fetch = function/);
   assert.match(helper, /XMLHttpRequest\.prototype\.open/);
+  assert.match(helper, /window\.Worker = function/);
+  assert.match(helper, /navigator\.serviceWorker\.register = function/);
+  assert.match(helper, /rewriteNodeTree\(document\)/);
   assert.ok(!("x-frame-options" in headers));
   assert.ok(!("strict-transport-security" in headers));
   assert.ok(!("content-length" in headers));
-  assert.equal(headers["content-security-policy"], "default-src 'self';  object-src 'none'");
+  assert.ok(!("content-security-policy-report-only" in headers));
+  assert.equal(headers["content-security-policy"].replace(/\s+/g, " ").trim(), "default-src 'self'; object-src 'none'");
 });
