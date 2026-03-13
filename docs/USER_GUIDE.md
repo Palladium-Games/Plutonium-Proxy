@@ -14,7 +14,9 @@ Plutonium Proxy is a local browser shell that loads remote pages through `/proxy
 
 - Type a URL such as `example.com` to open a site directly.
 - Type plain text to run a Google search.
+- Click into the address bar to get smart suggestions from open tabs, saved bookmarks, recent visits, and browser actions.
 - Use `+` to open a new tab and `x` to close the current tab.
+- Plutonium restores your last open tabs after a reload, so your session comes back automatically.
 - Watch the tab pulse and top progress bar during page loads.
 - Empty tabs open a Plutonium homescreen with the current time, saved bookmarks, and a customizable background.
 - The shell now loads multiple frontend CSS and JavaScript assets instead of one giant inline page, so browser-style UI updates are easier to evolve.
@@ -23,12 +25,14 @@ Plutonium Proxy is a local browser shell that loads remote pages through `/proxy
 
 - Click `Customize` on a new tab to set a background image URL.
 - Add bookmarks with a name and URL, or remove existing ones with the `×` button.
-- Homescreen settings are saved locally in your browser.
+- Homescreen settings and browser session state are saved locally in your browser.
 
 ## Keyboard Shortcuts
 
 - `Ctrl+T` or `Cmd+T`: new tab
+- `Ctrl+Shift+T` or `Cmd+Shift+T`: reopen the most recently closed tab
 - `Ctrl+W` or `Cmd+W`: close tab
+- `Ctrl+Shift+D` or `Cmd+Shift+D`: duplicate the current tab
 - `Ctrl+L` or `Cmd+L`: focus the address bar
 - `Ctrl+R` or `Cmd+R`: reload
 - `Ctrl+Tab` / `Ctrl+Shift+Tab`: cycle tabs

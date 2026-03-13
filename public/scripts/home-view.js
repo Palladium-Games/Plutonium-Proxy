@@ -106,7 +106,7 @@ export function createHomescreen(tab, options) {
         <div class="home-time" data-role="time"></div>
         <div class="home-date" data-role="date"></div>
         <div class="home-subtitle">
-          Launch into the web with your own launchpad. Keep your favorite places close, swap in a background, and let challenge-heavy pages keep rolling inside the same tab session.
+          Launch into the web with your own launchpad. Keep your favorite places close, restore your last session on reload, and jump faster with a smarter omnibox that learns from your tabs and recent visits.
         </div>
         <div class="challenge-hint" data-role="challenge-hint">
           This page looks verification-heavy, but the proxy session stays with you while you browse.
@@ -120,7 +120,7 @@ export function createHomescreen(tab, options) {
         <aside class="customize-card" data-role="customize-card">
           <div>
             <h2 class="customize-title">Customize</h2>
-            <div class="home-subtitle">Backgrounds and bookmarks are saved to this browser locally.</div>
+            <div class="home-subtitle">Backgrounds, bookmarks, and live browser state are all saved locally in Plutonium.</div>
           </div>
           <div class="customize-body">
             <label class="panel-label">

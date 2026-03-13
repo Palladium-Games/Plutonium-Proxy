@@ -1,5 +1,6 @@
 export const FRAME_EVENT_SOURCE = "plutonium-frame";
 export const HOME_STORAGE_KEY = "plutonium-home-settings";
+export const BROWSER_STATE_STORAGE_KEY = "plutonium-browser-state";
 
 export const DEFAULT_HOME_SETTINGS = {
   backgroundUrl: "",

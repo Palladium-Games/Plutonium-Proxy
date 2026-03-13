@@ -19,6 +19,8 @@
     <link rel="modulepreload" href="/scripts/browser-utils.js" />
     <link rel="modulepreload" href="/scripts/home-settings.js" />
     <link rel="modulepreload" href="/scripts/home-view.js" />
+    <link rel="modulepreload" href="/scripts/session-store.js" />
+    <link rel="modulepreload" href="/scripts/suggestion-utils.js" />
   </head>
   <body>
     <div class="chrome-window">
@@ -34,25 +36,28 @@
         </div>
       </div>
       <div class="chrome-toolbar">
-        <div class="chrome-omnibox" id="chrome-omnibox" role="combobox" aria-label="Address bar">
-          <div class="chrome-omnibox-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="11" cy="11" r="8"></circle>
-              <path d="m21 21-4.35-4.35"></path>
-            </svg>
+        <div class="chrome-toolbar-stack">
+          <div class="chrome-omnibox" id="chrome-omnibox" role="combobox" aria-label="Address bar" aria-expanded="false">
+            <div class="chrome-omnibox-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+              </svg>
+            </div>
+            <span class="chrome-omnibox-proto" id="omnibox-proto"></span>
+            <div class="chrome-omnibox-input-wrap">
+              <form id="proxy-form">
+                <input
+                  id="url-input"
+                  type="text"
+                  autocomplete="off"
+                  placeholder="Search Google or type a URL"
+                  spellcheck="false"
+                />
+              </form>
+            </div>
           </div>
-          <span class="chrome-omnibox-proto" id="omnibox-proto"></span>
-          <div class="chrome-omnibox-input-wrap">
-            <form id="proxy-form">
-              <input
-                id="url-input"
-                type="text"
-                autocomplete="off"
-                placeholder="Search Google or type a URL"
-                spellcheck="false"
-              />
-            </form>
-          </div>
+          <div class="omnibox-panel" id="omnibox-panel" role="listbox" hidden></div>
         </div>
       </div>
       <div class="chrome-content" id="chrome-content">

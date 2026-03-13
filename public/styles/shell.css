@@ -194,16 +194,22 @@
 .chrome-toolbar {
   display: flex;
   align-items: center;
-  height: 48px;
-  min-height: 48px;
+  height: 56px;
+  min-height: 56px;
   padding: 0 20px;
   background: linear-gradient(180deg, var(--toolbar) 0%, rgba(13, 17, 23, 0.98) 100%);
   border-bottom: 1px solid rgba(48, 54, 61, 0.5);
+  position: relative;
+  z-index: 4;
+}
+
+.chrome-toolbar-stack {
+  width: min(760px, 100%);
+  position: relative;
 }
 
 .chrome-omnibox {
-  flex: 1;
-  max-width: 680px;
+  width: 100%;
   height: 36px;
   display: flex;
   align-items: center;
@@ -218,6 +224,12 @@
 .chrome-omnibox:focus-within {
   border-color: var(--omnibox-focus);
   box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.chrome-omnibox.open {
+  background: rgba(18, 23, 34, 0.98);
+  border-color: rgba(56, 189, 248, 0.42);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.22), 0 0 0 2px rgba(56, 189, 248, 0.12);
 }
 
 .chrome-omnibox-icon {
@@ -247,6 +259,10 @@
   min-width: 0;
 }
 
+.chrome-omnibox-input-wrap form {
+  width: 100%;
+}
+
 .chrome-omnibox input {
   all: unset;
   width: 100%;
@@ -256,6 +272,114 @@
 
 .chrome-omnibox input::placeholder {
   color: var(--text-dim);
+}
+
+.omnibox-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  right: 0;
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 18px;
+  border: 1px solid rgba(56, 189, 248, 0.18);
+  background:
+    radial-gradient(circle at top right, rgba(56, 189, 248, 0.12), transparent 36%),
+    linear-gradient(180deg, rgba(15, 22, 34, 0.98), rgba(9, 13, 22, 0.98));
+  backdrop-filter: blur(20px);
+  box-shadow: 0 28px 60px rgba(0, 0, 0, 0.34);
+  max-height: min(420px, calc(100vh - 140px));
+  overflow: auto;
+}
+
+.omnibox-panel[hidden] {
+  display: none;
+}
+
+.omnibox-suggestion {
+  width: 100%;
+  border: none;
+  border-radius: 14px;
+  padding: 11px 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.18s var(--ease-out), transform 0.14s var(--ease-out), box-shadow 0.18s var(--ease-out);
+}
+
+.omnibox-suggestion:hover,
+.omnibox-suggestion.is-selected {
+  background: rgba(56, 189, 248, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.18);
+}
+
+.omnibox-suggestion:active {
+  transform: scale(0.992);
+}
+
+.omnibox-suggestion-badge {
+  min-width: 70px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.omnibox-suggestion-badge.kind-navigate,
+.omnibox-suggestion-badge.kind-bookmark {
+  color: #89dceb;
+  background: rgba(56, 189, 248, 0.14);
+}
+
+.omnibox-suggestion-badge.kind-history {
+  color: #f9c97b;
+  background: rgba(249, 201, 123, 0.14);
+}
+
+.omnibox-suggestion-badge.kind-tab {
+  color: #c4b5fd;
+  background: rgba(139, 92, 246, 0.18);
+}
+
+.omnibox-suggestion-badge.kind-action {
+  color: #86efac;
+  background: rgba(34, 197, 94, 0.14);
+}
+
+.omnibox-suggestion-copy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.omnibox-suggestion-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.omnibox-suggestion-description {
+  font-size: 12px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .chrome-content {
