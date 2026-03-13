@@ -390,6 +390,73 @@
   overflow: hidden;
 }
 
+.challenge-banner {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(249, 201, 123, 0.24);
+  background:
+    radial-gradient(circle at left, rgba(249, 201, 123, 0.14), transparent 32%),
+    linear-gradient(180deg, rgba(20, 24, 32, 0.94), rgba(12, 16, 24, 0.96));
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(16px);
+}
+
+.challenge-banner[hidden] {
+  display: none;
+}
+
+.challenge-banner-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.challenge-banner-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #f9c97b;
+  letter-spacing: 0.01em;
+}
+
+.challenge-banner-text {
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+.challenge-banner-button {
+  flex-shrink: 0;
+  border: none;
+  border-radius: 999px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, rgba(249, 201, 123, 0.22), rgba(56, 189, 248, 0.2));
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.14s var(--ease-out), filter 0.18s var(--ease-out), box-shadow 0.18s var(--ease-out);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.challenge-banner-button:hover {
+  filter: brightness(1.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14), 0 10px 24px rgba(56, 189, 248, 0.12);
+}
+
+.challenge-banner-button:active {
+  transform: scale(0.98);
+}
+
 .chrome-content::before {
   content: "";
   position: absolute;
@@ -436,4 +503,15 @@
 
 .chrome-content .tab-pane iframe.is-hidden {
   display: none;
+}
+
+@media (max-width: 720px) {
+  .challenge-banner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .challenge-banner-button {
+    width: 100%;
+  }
 }

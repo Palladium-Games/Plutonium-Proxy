@@ -18,6 +18,7 @@ Plutonium is a local browser shell that loads remote pages through `/proxy?url=.
 - Use `+` to open a new tab and `x` to close the current tab.
 - Plutonium restores your last open tabs after a reload, so your session comes back automatically.
 - Modern sites with inline styles, import maps, workers, and service worker registration now have broader compatibility support than earlier builds.
+- Challenge-heavy pages now show a `Focus Mode` handoff that opens the same Plutonium session in a full browser tab when an embedded flow needs more room.
 - Watch the tab pulse and top progress bar during page loads.
 - Empty tabs open a Plutonium homescreen with the current time, saved bookmarks, and a customizable background.
 - The shell now loads multiple frontend CSS and JavaScript assets instead of one giant inline page, so browser-style UI updates are easier to evolve.
@@ -44,5 +45,5 @@ Plutonium is a local browser shell that loads remote pages through `/proxy?url=.
 
 - If a page does not load, confirm the target URL works directly in a browser first.
 - Some sites may still resist iframe embedding or aggressive script rewriting.
-- Verification-heavy sites now stay in the same Plutonium session, but some providers may still block iframe-based flows on their side.
+- Verification-heavy sites now stay in the same Plutonium session, and the shell can hand them off into `Focus Mode` when a full top-level tab is more reliable.
 - Run `npm test` to verify the local proxy behavior after any change.

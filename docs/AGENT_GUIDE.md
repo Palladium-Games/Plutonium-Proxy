@@ -9,6 +9,7 @@
 - [`public/styles/`](/Users/sethpang/Coding/Plutonium%20Proxy/public/styles) contains the split stylesheet stack for tokens, shell layout, homescreen visuals, and motion.
 - [`public/scripts/session-store.js`](/Users/sethpang/Coding/Plutonium%20Proxy/public/scripts/session-store.js) owns browser session persistence for tabs, recent visits, and recently closed tabs.
 - [`public/scripts/suggestion-utils.js`](/Users/sethpang/Coding/Plutonium%20Proxy/public/scripts/suggestion-utils.js) builds the omnibox suggestion model from bookmarks, open tabs, history, and action shortcuts.
+- [`public/scripts/browser-utils.js`](/Users/sethpang/Coding/Plutonium%20Proxy/public/scripts/browser-utils.js) also exposes challenge heuristics and the top-level focus-mode URL helper used for embedded verification handoff.
 - [`public/scripts/`](/Users/sethpang/Coding/Plutonium%20Proxy/public/scripts) contains the split frontend module graph for configuration, helpers, storage, homescreen rendering, suggestion ranking, and tab orchestration.
 
 ## Core Flow

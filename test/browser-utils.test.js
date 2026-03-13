@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   challengeLikely,
   escapeHtml,
+  getFocusModeHref,
   getDisplayedValue,
   getProtocolBadge,
   normalizeBookmark,
@@ -41,6 +42,8 @@ test("browser utilities parse omnibox input and present tab chrome values", () =
 test("browser utilities flag challenge-like pages", () => {
   assert.equal(challengeLikely({ title: "Attention Required! | Cloudflare", url: "https://example.com" }), true);
   assert.equal(challengeLikely({ title: "Example Domain", url: "https://example.com" }), false);
+  assert.equal(getFocusModeHref({ mode: "web", url: "https://example.com/challenge" }), "/proxy?url=https%3A%2F%2Fexample.com%2Fchallenge");
+  assert.equal(getFocusModeHref({ mode: "home", url: "https://example.com/challenge" }), "");
 });
 
 test("home settings load and save through a storage-like interface", () => {

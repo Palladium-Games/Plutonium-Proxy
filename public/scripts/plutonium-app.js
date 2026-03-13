@@ -1,6 +1,8 @@
 import { FRAME_EVENT_SOURCE } from "./config.js";
 import {
+  challengeLikely,
   escapeHtml,
+  getFocusModeHref,
   getDisplayedValue,
   getProtocolBadge,
   nextId,
@@ -16,6 +18,9 @@ import { buildOmniboxSuggestions } from "./suggestion-utils.js";
 const tabStrip = document.getElementById("tab-strip");
 const tabPanes = document.getElementById("tab-panes");
 const chromeContent = document.getElementById("chrome-content");
+const challengeBanner = document.getElementById("challenge-banner");
+const challengeBannerText = document.getElementById("challenge-banner-text");
+const challengeFocusBtn = document.getElementById("challenge-focus-btn");
 const omnibox = document.getElementById("chrome-omnibox");
 const omniboxPanel = document.getElementById("omnibox-panel");
 const form = document.getElementById("proxy-form");
@@ -205,6 +210,39 @@ function updateAddressBar(tab = getActiveTab()) {
   protoSpan.textContent = getProtocolBadge(tab);
 }
 
+function updateChallengeAssist(tab = getActiveTab()) {
+  if (!challengeBanner || !challengeBannerText || !challengeFocusBtn) {
+    return;
+  }
+
+  const focusHref = getFocusModeHref(tab);
+  const showAssist = Boolean(tab && challengeLikely(tab) && focusHref);
+  challengeBanner.hidden = !showAssist;
+
+  if (!showAssist) {
+    challengeFocusBtn.disabled = true;
+    challengeFocusBtn.dataset.focusHref = "";
+    return;
+  }
+
+  challengeFocusBtn.disabled = false;
+  challengeFocusBtn.dataset.focusHref = focusHref;
+
+  const host = tab?.url ? tabTitleFromUrl(tab.url) : "this page";
+  challengeBannerText.textContent =
+    `Some verification flows on ${host} work more reliably in a full browser tab. ` +
+    `Focus Mode opens the same Plutonium session without the embedded shell.`;
+}
+
+function openFocusMode(tab = getActiveTab()) {
+  const focusHref = getFocusModeHref(tab);
+  if (!focusHref) {
+    return;
+  }
+
+  window.open(focusHref, "_blank", "noopener");
+}
+
 function updateControls() {
   const tab = getActiveTab();
   const canReload = Boolean(tab?.mode === "web" && (tab.url || tab?.frame?.src));
@@ -215,6 +253,7 @@ function updateControls() {
   backBtn.disabled = !canGoBack;
   forwardBtn.disabled = !canGoForward;
   chromeContent.classList.toggle("loading", Boolean(tab?.loading));
+  updateChallengeAssist(tab);
 }
 
 function renderTabActive() {
@@ -308,7 +347,7 @@ function createTab(id = nextId(), options = {}) {
   iframe.title = "Page content";
   iframe.loading = "eager";
   iframe.sandbox =
-    "allow-same-origin allow-forms allow-scripts allow-popups allow-popups-to-escape-sandbox allow-pointer-lock allow-modals allow-downloads allow-storage-access-by-user-activation";
+    "allow-same-origin allow-forms allow-scripts allow-popups allow-popups-to-escape-sandbox allow-pointer-lock allow-modals allow-downloads allow-storage-access-by-user-activation allow-top-navigation-by-user-activation";
   iframe.src = tab.url ? proxiedSrc(tab.url) : "about:blank";
   iframe.classList.toggle("is-hidden", mode === "home");
   pane.appendChild(iframe);
@@ -732,6 +771,10 @@ omniboxPanel.addEventListener("click", (event) => {
 
   const suggestion = omniboxSuggestions[Number(suggestionButton.dataset.suggestionIndex)];
   executeSuggestion(suggestion);
+});
+
+challengeFocusBtn?.addEventListener("click", () => {
+  openFocusMode();
 });
 
 reloadBtn.addEventListener("click", () => {

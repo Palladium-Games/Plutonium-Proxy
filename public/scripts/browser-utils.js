@@ -38,6 +38,20 @@ export function proxiedSrc(url) {
 }
 
 /**
+ * Build the top-level focus-mode URL for a web tab.
+ *
+ * @param {{mode?: string, url?: string} | null | undefined} tab Current tab.
+ * @returns {string} Top-level proxied URL, or an empty string when focus mode is unavailable.
+ */
+export function getFocusModeHref(tab) {
+  if (!tab || tab.mode !== "web" || !tab.url) {
+    return "";
+  }
+
+  return proxiedSrc(tab.url);
+}
+
+/**
  * Normalize user-entered bookmark data.
  *
  * @param {{name?: string, url?: string, accent?: string} | undefined | null} bookmark Bookmark candidate.
