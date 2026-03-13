@@ -5,7 +5,9 @@
 - [`src/app.js`](/Users/sethpang/Coding/Plutonium%20Proxy/src/app.js) builds the Express app and owns proxy middleware setup, validation, upstream response handling, and server start helpers.
 - [`src/proxy-utils.js`](/Users/sethpang/Coding/Plutonium%20Proxy/src/proxy-utils.js) contains the reusable rewrite helpers, header sanitation logic, and the injected iframe bridge script.
 - [`src/upstream-cookies.js`](/Users/sethpang/Coding/Plutonium%20Proxy/src/upstream-cookies.js) keeps upstream cookies in a server-side session jar keyed by the local proxy session cookie so verification pages and logins can persist.
-- [`public/index.html`](/Users/sethpang/Coding/Plutonium%20Proxy/public/index.html) is the browser shell UI. It tracks tab state, listens for iframe navigation messages, and drives the address bar plus loading states.
+- [`public/index.html`](/Users/sethpang/Coding/Plutonium%20Proxy/public/index.html) is now a lightweight shell that loads the browser UI from external CSS and ES modules.
+- [`public/styles/`](/Users/sethpang/Coding/Plutonium%20Proxy/public/styles) contains the split stylesheet stack for tokens, shell layout, homescreen visuals, and motion.
+- [`public/scripts/`](/Users/sethpang/Coding/Plutonium%20Proxy/public/scripts) contains the split frontend module graph for configuration, helpers, homescreen storage/rendering, and tab orchestration.
 
 ## Core Flow
 
@@ -25,5 +27,6 @@
 - Keep proxy route changes covered by tests in [`test/app.test.js`](/Users/sethpang/Coding/Plutonium%20Proxy/test/app.test.js).
 - Keep rewrite helper changes covered by tests in [`test/proxy-utils.test.js`](/Users/sethpang/Coding/Plutonium%20Proxy/test/proxy-utils.test.js).
 - Keep cookie/session changes covered by tests in [`test/upstream-cookies.test.js`](/Users/sethpang/Coding/Plutonium%20Proxy/test/upstream-cookies.test.js).
+- Keep frontend helper/storage changes covered by tests in [`test/browser-utils.test.js`](/Users/sethpang/Coding/Plutonium%20Proxy/test/browser-utils.test.js).
 - Preserve the iframe bridge event contract unless the shell and injected helper are updated together.
-- Empty-tab changes should preserve the homescreen/bookmark/localStorage behavior in [`public/index.html`](/Users/sethpang/Coding/Plutonium%20Proxy/public/index.html).
+- Empty-tab changes should preserve the homescreen/bookmark/localStorage behavior across [`public/scripts/home-view.js`](/Users/sethpang/Coding/Plutonium%20Proxy/public/scripts/home-view.js) and [`public/scripts/home-settings.js`](/Users/sethpang/Coding/Plutonium%20Proxy/public/scripts/home-settings.js).
