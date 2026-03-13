@@ -16,6 +16,14 @@ Plutonium Proxy is a local browser shell that loads remote pages through `/proxy
 - Type plain text to run a Google search.
 - Use `+` to open a new tab and `x` to close the current tab.
 - Watch the tab pulse and top progress bar during page loads.
+- Empty tabs open a Plutonium homescreen with the current time, saved bookmarks, and a customizable background.
+- Use `Direct` in the toolbar when a site needs a less constrained page for CAPTCHA or verification prompts.
+
+## Homescreen
+
+- Click `Customize` on a new tab to set a background image URL.
+- Add bookmarks with a name and URL, or remove existing ones with the `×` button.
+- Homescreen settings are saved locally in your browser.
 
 ## Keyboard Shortcuts
 
@@ -31,4 +39,5 @@ Plutonium Proxy is a local browser shell that loads remote pages through `/proxy
 
 - If a page does not load, confirm the target URL works directly in a browser first.
 - Some sites may still resist iframe embedding or aggressive script rewriting.
+- Verification-heavy sites often work best after opening them with `Direct`, completing the challenge, and then returning to the shell tab.
 - Run `npm test` to verify the local proxy behavior after any change.

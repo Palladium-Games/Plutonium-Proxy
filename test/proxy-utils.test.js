@@ -51,6 +51,13 @@ test("rewriteHtml proxies common attributes and meta refresh targets", () => {
   assert.match(rewritten, /content="0;url=\/proxy\?url=https%3A%2F%2Fexample\.com%2Fnext"/);
 });
 
+test("rewriteHtml keeps top-targeted navigation inside the proxy iframe", () => {
+  const html = '<a href="/challenge" target="_top">Verify</a><form action="/submit" target="_parent"></form>';
+  const rewritten = rewriteHtml(html, "https://example.com/start");
+
+  assert.match(rewritten, /target="_self"/);
+});
+
 test("rewriteCss and rewriteJs keep asset fetches inside the proxy", () => {
   const css = '@import "/styles/site.css"; .hero { background-image: url("../img/hero.png"); }';
   const js = 'fetch("/api/data"); const login = "/auth/login";';
@@ -84,6 +91,8 @@ test("buildFrameHelperScript and sanitizeProxyHeaders lock down iframe integrati
 
   assert.match(helper, new RegExp(FRAME_EVENT_SOURCE));
   assert.match(helper, /https:\/\/example\.com\/inside/);
+  assert.match(helper, /window\.fetch = function/);
+  assert.match(helper, /XMLHttpRequest\.prototype\.open/);
   assert.ok(!("x-frame-options" in headers));
   assert.ok(!("strict-transport-security" in headers));
   assert.ok(!("content-length" in headers));

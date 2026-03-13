@@ -19,6 +19,11 @@ import {
   rewriteJs,
   sanitizeProxyHeaders,
 } from "./proxy-utils.js";
+import {
+  attachProxySession,
+  getUpstreamCookieHeader,
+  storeUpstreamCookies,
+} from "./upstream-cookies.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -62,6 +67,7 @@ export function createApp(options = {}) {
     })
   );
   app.use(cors());
+  app.use(attachProxySession);
 
   if (enableRequestLogging) {
     app.use(morgan("dev"));
@@ -172,6 +178,18 @@ function createProxyOptions(logger) {
         if (referer) {
           setProxyHeader(proxyReq, "referer", referer);
         }
+
+        const origin = mapRequestOrigin(req);
+        if (origin) {
+          setProxyHeader(proxyReq, "origin", origin);
+        }
+
+        const upstreamCookies = getUpstreamCookieHeader(req.plutoniumSessionId, req.plutoniumTarget);
+        if (upstreamCookies) {
+          setProxyHeader(proxyReq, "cookie", upstreamCookies);
+        } else {
+          removeProxyHeader(proxyReq, "cookie");
+        }
       },
       proxyRes(proxyRes, req, res) {
         handleProxyResponse(proxyRes, req, res);
@@ -200,6 +218,9 @@ function handleProxyResponse(proxyRes, req, res) {
   const statusCode = proxyRes.statusCode || 200;
   const targetUrl = req.plutoniumTarget || "";
   const rewriteable = isRewriteableContentType(contentType);
+
+  storeUpstreamCookies(req.plutoniumSessionId, targetUrl, proxyRes.headers["set-cookie"]);
+  delete headers["set-cookie"];
 
   if (req.method === "HEAD") {
     if (isCacheableAssetContentType(contentType)) {
@@ -320,4 +341,45 @@ function setProxyHeader(proxyReq, name, value) {
   try {
     proxyReq.setHeader(name, value);
   } catch {}
+}
+
+/**
+ * Remove a proxied request header only when the underlying request is still mutable.
+ *
+ * @param {import("http").ClientRequest} proxyReq Outgoing proxied request.
+ * @param {string} name Header name.
+ * @returns {void}
+ */
+function removeProxyHeader(proxyReq, name) {
+  if (proxyReq.headersSent) {
+    return;
+  }
+
+  try {
+    proxyReq.removeHeader(name);
+  } catch {}
+}
+
+/**
+ * Map the browser's local proxy origin to the current upstream origin.
+ *
+ * @param {import("express").Request} req Incoming proxy request.
+ * @returns {string} Upstream origin value or an empty string when none should be sent.
+ */
+function mapRequestOrigin(req) {
+  const rawOrigin = `${req.headers.origin || ""}`.trim();
+  if (!rawOrigin) {
+    return "";
+  }
+
+  const localOrigin = `${req.protocol}://${req.get("host")}`;
+  if (rawOrigin !== localOrigin) {
+    return rawOrigin;
+  }
+
+  try {
+    return new URL(req.plutoniumTarget).origin;
+  } catch {
+    return "";
+  }
 }

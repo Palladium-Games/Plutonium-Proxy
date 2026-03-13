@@ -3,6 +3,7 @@ import { once } from "node:events";
 import http from "node:http";
 import test from "node:test";
 import { createApp } from "../src/app.js";
+import { resetUpstreamCookieStores } from "../src/upstream-cookies.js";
 
 const silentLogger = {
   info() {},
@@ -92,12 +93,34 @@ function createUpstreamServer() {
       return;
     }
 
+    if (req.url === "/cookie-start") {
+      res.writeHead(200, {
+        "content-type": "text/html; charset=utf-8",
+        "set-cookie": ["challenge=passed; Path=/; HttpOnly"],
+      });
+      res.end("<html><body>challenge cookie issued</body></html>");
+      return;
+    }
+
+    if (req.url === "/cookie-check") {
+      res.writeHead(200, { "content-type": "application/json; charset=utf-8" });
+      res.end(
+        JSON.stringify({
+          cookie: req.headers.cookie || "",
+          origin: req.headers.origin || "",
+          referer: req.headers.referer || "",
+        })
+      );
+      return;
+    }
+
     res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
     res.end("not found");
   });
 }
 
 test("proxy responds with rewritten HTML instead of hanging", async (t) => {
+  resetUpstreamCookieStores();
   const upstream = createUpstreamServer();
   const upstreamBaseUrl = await listen(upstream);
   t.after(() => close(upstream));
@@ -121,6 +144,7 @@ test("proxy responds with rewritten HTML instead of hanging", async (t) => {
 });
 
 test("proxy rewrites CSS and JavaScript assets", async (t) => {
+  resetUpstreamCookieStores();
   const upstream = createUpstreamServer();
   const upstreamBaseUrl = await listen(upstream);
   t.after(() => close(upstream));
@@ -143,6 +167,7 @@ test("proxy rewrites CSS and JavaScript assets", async (t) => {
 });
 
 test("proxy handles HEAD requests and bad inputs cleanly", async (t) => {
+  resetUpstreamCookieStores();
   const upstream = createUpstreamServer();
   const upstreamBaseUrl = await listen(upstream);
   t.after(() => close(upstream));
@@ -167,6 +192,7 @@ test("proxy handles HEAD requests and bad inputs cleanly", async (t) => {
 });
 
 test("proxy follows upstream redirects without crashing the server", async (t) => {
+  resetUpstreamCookieStores();
   const upstream = createUpstreamServer();
   const upstreamBaseUrl = await listen(upstream);
   t.after(() => close(upstream));
@@ -181,4 +207,44 @@ test("proxy follows upstream redirects without crashing the server", async (t) =
 
   assert.equal(response.status, 200);
   assert.match(await response.text(), /Redirect landed successfully/);
+});
+
+test("proxy persists upstream cookies and remaps local origin headers", async (t) => {
+  resetUpstreamCookieStores();
+  const upstream = createUpstreamServer();
+  const upstreamBaseUrl = await listen(upstream);
+  t.after(() => close(upstream));
+
+  const app = createApp({ enableRequestLogging: false, logger: silentLogger });
+  const proxyServer = app.listen(0, "127.0.0.1");
+  await once(proxyServer, "listening");
+  t.after(() => close(proxyServer));
+
+  const proxyBaseUrl = `http://127.0.0.1:${proxyServer.address().port}`;
+  const cookieStartResponse = await fetch(
+    `${proxyBaseUrl}/proxy?url=${encodeURIComponent(`${upstreamBaseUrl}/cookie-start`)}`
+  );
+  const sessionCookie = (cookieStartResponse.headers.get("set-cookie") || "").split(";")[0];
+
+  assert.match(sessionCookie, /plutonium_session=/);
+  assert.ok(!sessionCookie.includes("challenge=passed"));
+
+  await cookieStartResponse.text();
+
+  const cookieCheckResponse = await fetch(
+    `${proxyBaseUrl}/proxy?url=${encodeURIComponent(`${upstreamBaseUrl}/cookie-check`)}`,
+    {
+      method: "POST",
+      headers: {
+        cookie: sessionCookie,
+        origin: proxyBaseUrl,
+        referer: `${proxyBaseUrl}/proxy?url=${encodeURIComponent(`${upstreamBaseUrl}/cookie-start`)}`,
+      },
+    }
+  );
+
+  const payload = await cookieCheckResponse.json();
+  assert.match(payload.cookie, /challenge=passed/);
+  assert.equal(payload.origin, upstreamBaseUrl);
+  assert.equal(payload.referer, `${upstreamBaseUrl}/cookie-start`);
 });

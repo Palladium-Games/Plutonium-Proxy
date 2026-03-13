@@ -111,7 +111,8 @@ export function rewriteHtml(html, baseUrl) {
     .replace(/\s(src)=(["'])([^"']*)\2/gi, rewriteAttr)
     .replace(/\s(action)=(["'])([^"']*)\2/gi, rewriteAttr)
     .replace(/\s(formaction)=(["'])([^"']*)\2/gi, rewriteAttr)
-    .replace(/\s(poster)=(["'])([^"']*)\2/gi, rewriteAttr);
+    .replace(/\s(poster)=(["'])([^"']*)\2/gi, rewriteAttr)
+    .replace(/\s(target)=(["'])(_top|_parent)\2/gi, ' target=$2_self$2');
 
   rewritten = rewritten.replace(/\s(srcset)=(["'])([^"']+)\2/gi, (match, attr, quote, value) => {
     const parts = value.split(/,\s*/).map((part) => {
@@ -271,6 +272,7 @@ export function buildFrameHelperScript(targetUrl) {
 
   var SOURCE = ${JSON.stringify(FRAME_EVENT_SOURCE)};
   var ORIGINAL_URL = ${safeTargetUrl};
+  var PROXY_PATH = ${JSON.stringify(PROXY_PATH)};
 
   function readTargetUrl() {
     try {
@@ -300,6 +302,72 @@ export function buildFrameHelperScript(targetUrl) {
     post("loading", { readyState: document.readyState });
   }
 
+  function resolveUpstreamUrl(rawUrl) {
+    if (rawUrl == null || rawUrl === "") {
+      return "";
+    }
+
+    var text = String(rawUrl).trim();
+    if (!text || text === "#" || /^javascript:/i.test(text) || /^data:/i.test(text) || /^blob:/i.test(text) || /^mailto:/i.test(text)) {
+      return "";
+    }
+
+    try {
+      var proxiedCandidate = new URL(text, window.location.origin);
+      if (proxiedCandidate.pathname === PROXY_PATH && proxiedCandidate.searchParams.get("url")) {
+        return proxiedCandidate.searchParams.get("url");
+      }
+    } catch (error) {}
+
+    try {
+      return new URL(text, readTargetUrl()).href;
+    } catch (error) {
+      return "";
+    }
+  }
+
+  function toProxyUrl(rawUrl) {
+    var resolved = resolveUpstreamUrl(rawUrl);
+    return resolved ? PROXY_PATH + "?url=" + encodeURIComponent(resolved) : "";
+  }
+
+  function normalizeTarget(element) {
+    if (!element || typeof element.getAttribute !== "function" || typeof element.setAttribute !== "function") {
+      return;
+    }
+
+    var target = (element.getAttribute("target") || "").toLowerCase();
+    if (target === "_top" || target === "_parent") {
+      element.setAttribute("target", "_self");
+    }
+  }
+
+  function rewriteAnchor(anchor) {
+    if (!anchor || typeof anchor.getAttribute !== "function") {
+      return;
+    }
+
+    normalizeTarget(anchor);
+    var href = anchor.getAttribute("href");
+    var proxiedHref = toProxyUrl(href);
+    if (proxiedHref) {
+      anchor.setAttribute("href", proxiedHref);
+    }
+  }
+
+  function rewriteForm(form) {
+    if (!form || typeof form.getAttribute !== "function") {
+      return;
+    }
+
+    normalizeTarget(form);
+    var action = form.getAttribute("action") || readTargetUrl();
+    var proxiedAction = toProxyUrl(action);
+    if (proxiedAction) {
+      form.setAttribute("action", proxiedAction);
+    }
+  }
+
   try {
     Object.defineProperty(window, "top", {
       get: function () {
@@ -313,11 +381,79 @@ export function buildFrameHelperScript(targetUrl) {
     if (typeof original !== "function") return;
 
     window.history[methodName] = function () {
+      if (arguments.length >= 3 && arguments[2]) {
+        var proxiedHistoryUrl = toProxyUrl(arguments[2]);
+        if (proxiedHistoryUrl) {
+          arguments[2] = proxiedHistoryUrl;
+        }
+      }
       var result = original.apply(this, arguments);
       Promise.resolve().then(commit);
       return result;
     };
   });
+
+  try {
+    var locationProto = Object.getPrototypeOf(window.location);
+    if (locationProto && typeof locationProto.assign === "function") {
+      var originalAssign = locationProto.assign;
+      locationProto.assign = function (nextUrl) {
+        return originalAssign.call(this, toProxyUrl(nextUrl) || nextUrl);
+      };
+    }
+    if (locationProto && typeof locationProto.replace === "function") {
+      var originalReplace = locationProto.replace;
+      locationProto.replace = function (nextUrl) {
+        return originalReplace.call(this, toProxyUrl(nextUrl) || nextUrl);
+      };
+    }
+  } catch (error) {}
+
+  if (typeof window.fetch === "function") {
+    var originalFetch = window.fetch.bind(window);
+    window.fetch = function (input, init) {
+      try {
+        if (typeof Request !== "undefined" && input instanceof Request) {
+          var rewrittenRequestUrl = toProxyUrl(input.url);
+          if (rewrittenRequestUrl) {
+            return originalFetch(new Request(rewrittenRequestUrl, input), init);
+          }
+        }
+
+        var rawInput = input && typeof input === "object" && "href" in input ? input.href : input;
+        var rewrittenUrl = toProxyUrl(rawInput);
+        if (rewrittenUrl) {
+          return originalFetch(rewrittenUrl, init);
+        }
+      } catch (error) {}
+
+      return originalFetch(input, init);
+    };
+  }
+
+  if (window.XMLHttpRequest && window.XMLHttpRequest.prototype) {
+    var originalXhrOpen = window.XMLHttpRequest.prototype.open;
+    window.XMLHttpRequest.prototype.open = function (method, requestUrl) {
+      var proxiedUrl = toProxyUrl(requestUrl);
+      arguments[1] = proxiedUrl || requestUrl;
+      return originalXhrOpen.apply(this, arguments);
+    };
+  }
+
+  if (navigator && typeof navigator.sendBeacon === "function") {
+    var originalSendBeacon = navigator.sendBeacon.bind(navigator);
+    navigator.sendBeacon = function (requestUrl, data) {
+      return originalSendBeacon(toProxyUrl(requestUrl) || requestUrl, data);
+    };
+  }
+
+  if (typeof window.open === "function") {
+    var originalOpen = window.open.bind(window);
+    window.open = function (requestUrl, target, features) {
+      var proxiedUrl = toProxyUrl(requestUrl);
+      return originalOpen(proxiedUrl || requestUrl, target, features);
+    };
+  }
 
   if (window.MutationObserver) {
     var titleObserver = new MutationObserver(function () {
@@ -336,10 +472,14 @@ export function buildFrameHelperScript(targetUrl) {
     if (!anchor) return;
     var href = anchor.getAttribute("href") || "";
     if (!href || href.startsWith("#")) return;
+    rewriteAnchor(anchor);
     loading();
   }, true);
 
-  document.addEventListener("submit", loading, true);
+  document.addEventListener("submit", function (event) {
+    rewriteForm(event.target);
+    loading();
+  }, true);
   window.addEventListener("hashchange", commit);
   window.addEventListener("popstate", commit);
   window.addEventListener("pageshow", commit);

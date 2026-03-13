@@ -30,6 +30,9 @@
         --accent-soft: rgba(56, 189, 248, 0.15);
         --hover: rgba(56, 189, 248, 0.12);
         --glow: 0 0 20px rgba(56, 189, 248, 0.15);
+        --surface: rgba(12, 18, 32, 0.78);
+        --surface-strong: rgba(11, 17, 30, 0.9);
+        --surface-border: rgba(148, 163, 184, 0.18);
       }
       * { box-sizing: border-box; }
       html {
@@ -86,6 +89,18 @@
         font-size: 18px;
         line-height: 1;
         transition: background 0.2s var(--ease-out), color 0.2s var(--ease-out), transform 0.15s var(--ease-out);
+      }
+      .chrome-nav-buttons .icon-btn.label-btn {
+        width: auto;
+        padding: 0 12px;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+      }
+      .chrome-nav-buttons .icon-btn.attention {
+        background: rgba(56, 189, 248, 0.16);
+        color: var(--accent);
+        box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.28);
       }
       .chrome-nav-buttons .icon-btn:active:not(:disabled) {
         transform: scale(0.92);
@@ -326,6 +341,283 @@
         display: block;
         background: radial-gradient(circle at top, rgba(56, 189, 248, 0.07), transparent 48%), #0b1020;
       }
+      .chrome-content .tab-pane iframe.is-hidden {
+        display: none;
+      }
+      .tab-pane-home {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: stretch;
+        justify-content: center;
+        padding: 32px clamp(18px, 4vw, 42px);
+        color: var(--text);
+        overflow-y: auto;
+        background:
+          radial-gradient(circle at top right, rgba(56, 189, 248, 0.18), transparent 32%),
+          radial-gradient(circle at bottom left, rgba(99, 102, 241, 0.16), transparent 36%),
+          linear-gradient(180deg, rgba(10, 14, 23, 0.94), rgba(7, 10, 18, 0.98));
+      }
+      .tab-pane-home.hidden {
+        display: none;
+      }
+      .tab-pane-home::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        background-size: 28px 28px;
+        opacity: 0.18;
+        pointer-events: none;
+      }
+      .tab-pane-home.has-custom-bg {
+        background-size: cover;
+        background-position: center;
+      }
+      .home-shell {
+        position: relative;
+        z-index: 1;
+        width: min(1080px, 100%);
+        display: grid;
+        gap: 22px;
+        align-content: start;
+      }
+      .home-topbar {
+        display: flex;
+        justify-content: flex-end;
+      }
+      .home-chip {
+        border: 1px solid var(--surface-border);
+        background: rgba(12, 18, 32, 0.72);
+        color: var(--text);
+        border-radius: 999px;
+        padding: 9px 14px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        backdrop-filter: blur(14px);
+        transition: transform 0.16s var(--ease-out), border-color 0.2s var(--ease-out), background 0.2s var(--ease-out);
+      }
+      .home-chip:hover {
+        transform: translateY(-1px);
+        border-color: rgba(56, 189, 248, 0.35);
+        background: rgba(18, 28, 48, 0.84);
+      }
+      .home-hero {
+        padding: 28px;
+        border: 1px solid var(--surface-border);
+        border-radius: 28px;
+        background: linear-gradient(160deg, rgba(10, 17, 31, 0.82), rgba(10, 17, 31, 0.58));
+        backdrop-filter: blur(22px);
+        box-shadow: 0 22px 60px rgba(3, 8, 20, 0.45);
+      }
+      .home-brand {
+        font-size: 13px;
+        letter-spacing: 0.28em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 16px;
+      }
+      .home-time {
+        font-size: clamp(52px, 11vw, 112px);
+        line-height: 0.95;
+        letter-spacing: -0.04em;
+        font-weight: 600;
+      }
+      .home-date {
+        margin-top: 12px;
+        font-size: clamp(14px, 2vw, 18px);
+        color: var(--text-dim);
+      }
+      .home-subtitle {
+        margin-top: 18px;
+        max-width: 640px;
+        color: rgba(230, 237, 243, 0.82);
+        font-size: 14px;
+        line-height: 1.6;
+      }
+      .home-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.9fr);
+        gap: 22px;
+      }
+      .bookmark-board,
+      .customize-card {
+        border: 1px solid var(--surface-border);
+        border-radius: 26px;
+        background: linear-gradient(180deg, rgba(11, 17, 30, 0.9), rgba(11, 17, 30, 0.72));
+        backdrop-filter: blur(18px);
+        box-shadow: 0 18px 46px rgba(4, 10, 22, 0.34);
+      }
+      .bookmark-board {
+        padding: 24px;
+      }
+      .board-title,
+      .customize-title {
+        margin: 0 0 16px;
+        font-size: 14px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-dim);
+      }
+      .bookmark-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 14px;
+      }
+      .bookmark-card {
+        border: 1px solid rgba(56, 189, 248, 0.12);
+        border-radius: 20px;
+        background: rgba(16, 24, 40, 0.74);
+        color: var(--text);
+        padding: 18px 16px;
+        cursor: pointer;
+        text-align: left;
+        min-height: 110px;
+        transition: transform 0.18s var(--ease-out), border-color 0.2s var(--ease-out), background 0.2s var(--ease-out);
+      }
+      .bookmark-card:hover {
+        transform: translateY(-2px);
+        border-color: rgba(56, 189, 248, 0.32);
+        background: rgba(18, 30, 52, 0.86);
+      }
+      .bookmark-icon {
+        width: 40px;
+        height: 40px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 14px;
+        margin-bottom: 16px;
+        background: linear-gradient(135deg, rgba(56, 189, 248, 0.24), rgba(99, 102, 241, 0.22));
+        font-size: 15px;
+        font-weight: 700;
+        color: #dff6ff;
+      }
+      .bookmark-name {
+        display: block;
+        font-size: 15px;
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+      .bookmark-url {
+        display: block;
+        font-size: 12px;
+        color: var(--text-dim);
+        line-height: 1.4;
+      }
+      .customize-card {
+        padding: 24px;
+        display: grid;
+        gap: 14px;
+      }
+      .customize-body {
+        display: none;
+        gap: 14px;
+      }
+      .customize-card.open .customize-body {
+        display: grid;
+      }
+      .panel-label {
+        display: grid;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--text-dim);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      .panel-input {
+        width: 100%;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        background: rgba(8, 12, 24, 0.9);
+        color: var(--text);
+        border-radius: 14px;
+        padding: 12px 14px;
+        font-size: 13px;
+        outline: none;
+        transition: border-color 0.18s var(--ease-out), box-shadow 0.18s var(--ease-out);
+      }
+      .panel-input:focus {
+        border-color: rgba(56, 189, 248, 0.45);
+        box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.12);
+      }
+      .panel-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .panel-button {
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        border-radius: 14px;
+        padding: 10px 14px;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        cursor: pointer;
+        color: var(--text);
+        background: rgba(15, 23, 42, 0.92);
+        transition: transform 0.16s var(--ease-out), border-color 0.18s var(--ease-out);
+      }
+      .panel-button:hover {
+        transform: translateY(-1px);
+        border-color: rgba(56, 189, 248, 0.34);
+      }
+      .panel-button.primary {
+        background: linear-gradient(135deg, rgba(56, 189, 248, 0.22), rgba(99, 102, 241, 0.2));
+        border-color: rgba(56, 189, 248, 0.28);
+      }
+      .bookmark-list {
+        display: grid;
+        gap: 10px;
+        max-height: 240px;
+        overflow-y: auto;
+      }
+      .bookmark-list-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 12px 14px;
+        border-radius: 16px;
+        background: rgba(12, 18, 32, 0.78);
+        border: 1px solid rgba(148, 163, 184, 0.12);
+      }
+      .bookmark-list-name {
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .bookmark-list-url {
+        font-size: 11px;
+        color: var(--text-dim);
+      }
+      .bookmark-delete {
+        width: 28px;
+        height: 28px;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        color: #ffb4ad;
+        background: rgba(248, 81, 73, 0.14);
+      }
+      .challenge-hint {
+        margin-top: 12px;
+        display: none;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: #dff6ff;
+      }
+      .challenge-hint.visible {
+        display: inline-flex;
+      }
+      @media (max-width: 900px) {
+        .home-grid {
+          grid-template-columns: 1fr;
+        }
+      }
       @keyframes chrome-progress {
         from {
           transform: translateX(-140%);
@@ -363,6 +655,14 @@
           <button type="button" class="icon-btn" id="back-btn" title="Back (Alt+Left)">‹</button>
           <button type="button" class="icon-btn" id="forward-btn" title="Forward (Alt+Right)">›</button>
           <button type="button" class="icon-btn" id="reload-btn" title="Reload">↻</button>
+          <button
+            type="button"
+            class="icon-btn label-btn"
+            id="open-direct-btn"
+            title="Open the current page directly to handle verification-heavy flows"
+          >
+            Direct
+          </button>
         </div>
         <div class="chrome-tabs-wrap">
           <div class="chrome-tabs" id="tab-strip"></div>
@@ -400,10 +700,34 @@
       const reloadBtn = document.getElementById("reload-btn");
       const backBtn = document.getElementById("back-btn");
       const forwardBtn = document.getElementById("forward-btn");
+      const openDirectBtn = document.getElementById("open-direct-btn");
       const newTabBtn = document.getElementById("new-tab-btn");
+      const HOME_STORAGE_KEY = "plutonium-home-settings";
+      const DEFAULT_HOME_SETTINGS = {
+        backgroundUrl: "",
+        bookmarks: [
+          { name: "YouTube", url: "https://www.youtube.com/", accent: "YT" },
+          { name: "Gmail", url: "https://mail.google.com/", accent: "GM" },
+          { name: "GitHub", url: "https://github.com/", accent: "GH" },
+          { name: "Reddit", url: "https://www.reddit.com/", accent: "RD" },
+          { name: "X", url: "https://x.com/", accent: "X" },
+          { name: "Wikipedia", url: "https://www.wikipedia.org/", accent: "WK" },
+        ],
+      };
+      const CLOCK_FORMATTER = new Intl.DateTimeFormat([], {
+        hour: "numeric",
+        minute: "2-digit",
+      });
+      const DATE_FORMATTER = new Intl.DateTimeFormat([], {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+      });
 
       let tabs = [];
       let activeTabId = null;
+      let homeSettings = loadHomeSettings();
+      let clockTimerId = null;
 
       function nextId() {
         return "t" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
@@ -417,6 +741,68 @@
 
       function proxiedSrc(url) {
         return "/proxy?url=" + encodeURIComponent(url);
+      }
+
+      function loadHomeSettings() {
+        try {
+          const parsed = JSON.parse(localStorage.getItem(HOME_STORAGE_KEY) || "{}");
+          const bookmarks = Array.isArray(parsed.bookmarks) && parsed.bookmarks.length
+            ? parsed.bookmarks
+                .map((bookmark) => normalizeBookmark(bookmark))
+                .filter(Boolean)
+            : DEFAULT_HOME_SETTINGS.bookmarks.slice();
+
+          return {
+            backgroundUrl: typeof parsed.backgroundUrl === "string" ? parsed.backgroundUrl.trim() : "",
+            bookmarks,
+          };
+        } catch {
+          return {
+            backgroundUrl: "",
+            bookmarks: DEFAULT_HOME_SETTINGS.bookmarks.slice(),
+          };
+        }
+      }
+
+      function saveHomeSettings() {
+        localStorage.setItem(HOME_STORAGE_KEY, JSON.stringify(homeSettings));
+      }
+
+      function normalizeBookmark(bookmark) {
+        const name = `${bookmark?.name || ""}`.trim();
+        const url = `${bookmark?.url || ""}`.trim();
+        if (!name || !url) return null;
+
+        try {
+          const normalizedUrl = new URL(url.startsWith("http://") || url.startsWith("https://") ? url : "https://" + url);
+          return {
+            name,
+            url: normalizedUrl.href,
+            accent: `${bookmark?.accent || name.slice(0, 2)}`.trim().slice(0, 2).toUpperCase(),
+          };
+        } catch {
+          return null;
+        }
+      }
+
+      function formatTime(now = new Date()) {
+        return CLOCK_FORMATTER.format(now);
+      }
+
+      function formatDate(now = new Date()) {
+        return DATE_FORMATTER.format(now);
+      }
+
+      function challengeLikely(tab) {
+        const text = `${tab?.title || ""} ${tab?.url || ""}`.toLowerCase();
+        return /captcha|verify|challenge|just a moment|attention required|cloudflare|human/i.test(text);
+      }
+
+      function ensureClockTicker() {
+        if (clockTimerId) return;
+        clockTimerId = window.setInterval(() => {
+          renderAllHomescreens();
+        }, 1000);
       }
 
       function getTab(id) {
@@ -450,6 +836,183 @@
         if (tab.url.startsWith("https://")) return "https://";
         if (tab.url.startsWith("http://")) return "http://";
         return "";
+      }
+
+      function renderAllHomescreens() {
+        tabs.forEach((tab) => renderHomescreen(tab));
+      }
+
+      function renderHomescreen(tab) {
+        if (!tab?.home) return;
+
+        const now = new Date();
+        const timeNode = tab.home.querySelector("[data-role='time']");
+        const dateNode = tab.home.querySelector("[data-role='date']");
+        const bookmarksNode = tab.home.querySelector("[data-role='bookmarks']");
+        const listNode = tab.home.querySelector("[data-role='bookmark-list']");
+        const backgroundInput = tab.home.querySelector("[data-role='background-input']");
+        const challengeHint = tab.home.querySelector("[data-role='challenge-hint']");
+
+        if (timeNode) timeNode.textContent = formatTime(now);
+        if (dateNode) dateNode.textContent = formatDate(now);
+        if (backgroundInput) backgroundInput.value = homeSettings.backgroundUrl;
+
+        if (bookmarksNode) {
+          bookmarksNode.innerHTML = homeSettings.bookmarks
+            .map(
+              (bookmark, index) => `
+                <button type="button" class="bookmark-card" data-bookmark-index="${index}">
+                  <span class="bookmark-icon">${escapeHtml(bookmark.accent)}</span>
+                  <span class="bookmark-name">${escapeHtml(bookmark.name)}</span>
+                  <span class="bookmark-url">${escapeHtml(new URL(bookmark.url).hostname)}</span>
+                </button>
+              `
+            )
+            .join("");
+        }
+
+        if (listNode) {
+          listNode.innerHTML = homeSettings.bookmarks
+            .map(
+              (bookmark, index) => `
+                <div class="bookmark-list-item">
+                  <div>
+                    <div class="bookmark-list-name">${escapeHtml(bookmark.name)}</div>
+                    <div class="bookmark-list-url">${escapeHtml(bookmark.url)}</div>
+                  </div>
+                  <button type="button" class="bookmark-delete" data-delete-bookmark="${index}" aria-label="Delete bookmark">×</button>
+                </div>
+              `
+            )
+            .join("");
+        }
+
+        if (homeSettings.backgroundUrl) {
+          tab.home.classList.add("has-custom-bg");
+          tab.home.style.backgroundImage = `linear-gradient(180deg, rgba(6, 10, 18, 0.5), rgba(6, 10, 18, 0.84)), url("${homeSettings.backgroundUrl.replace(/(["\\])/g, "\\$1")}")`;
+        } else {
+          tab.home.classList.remove("has-custom-bg");
+          tab.home.style.backgroundImage = "";
+        }
+
+        if (challengeHint) {
+          challengeHint.classList.toggle("visible", challengeLikely(tab));
+        }
+      }
+
+      function createHomescreen(tab) {
+        const home = document.createElement("div");
+        home.className = "tab-pane-home";
+        home.innerHTML = `
+          <div class="home-shell">
+            <div class="home-topbar">
+              <button type="button" class="home-chip" data-action="toggle-customize">Customize</button>
+            </div>
+            <section class="home-hero">
+              <div class="home-brand">Plutonium</div>
+              <div class="home-time" data-role="time"></div>
+              <div class="home-date" data-role="date"></div>
+              <div class="home-subtitle">
+                Launch into the web with your own launchpad. Keep your favorite places close, swap in a background, and use Direct mode when verification pages need more room to breathe.
+              </div>
+              <div class="challenge-hint" data-role="challenge-hint">
+                Direct mode is handy for CAPTCHA and verification-heavy pages.
+              </div>
+            </section>
+            <section class="home-grid">
+              <div class="bookmark-board">
+                <h2 class="board-title">Launch Deck</h2>
+                <div class="bookmark-grid" data-role="bookmarks"></div>
+              </div>
+              <aside class="customize-card" data-role="customize-card">
+                <div>
+                  <h2 class="customize-title">Customize</h2>
+                  <div class="home-subtitle">Backgrounds and bookmarks are saved to this browser locally.</div>
+                </div>
+                <div class="customize-body">
+                  <label class="panel-label">
+                    Background Image URL
+                    <input class="panel-input" data-role="background-input" type="url" placeholder="https://images.example.com/wallpaper.jpg" />
+                  </label>
+                  <div class="panel-row">
+                    <button type="button" class="panel-button primary" data-action="save-background">Apply Background</button>
+                    <button type="button" class="panel-button" data-action="reset-background">Reset</button>
+                  </div>
+                  <form class="panel-row" data-role="bookmark-form">
+                    <input class="panel-input" data-role="bookmark-name" type="text" placeholder="Bookmark name" />
+                    <input class="panel-input" data-role="bookmark-url" type="url" placeholder="https://example.com" />
+                    <button type="submit" class="panel-button primary">Add Bookmark</button>
+                  </form>
+                  <div class="bookmark-list" data-role="bookmark-list"></div>
+                </div>
+              </aside>
+            </section>
+          </div>
+        `;
+
+        home.addEventListener("click", (event) => {
+          const bookmarkCard = event.target.closest("[data-bookmark-index]");
+          if (bookmarkCard) {
+            const bookmark = homeSettings.bookmarks[Number(bookmarkCard.dataset.bookmarkIndex)];
+            if (bookmark) {
+              navigateInTab(tab, bookmark.url);
+            }
+            return;
+          }
+
+          const deleteButton = event.target.closest("[data-delete-bookmark]");
+          if (deleteButton) {
+            homeSettings.bookmarks.splice(Number(deleteButton.dataset.deleteBookmark), 1);
+            saveHomeSettings();
+            renderAllHomescreens();
+            return;
+          }
+
+          const actionButton = event.target.closest("[data-action]");
+          if (!actionButton) return;
+
+          if (actionButton.dataset.action === "toggle-customize") {
+            home.querySelector("[data-role='customize-card']")?.classList.toggle("open");
+            return;
+          }
+
+          if (actionButton.dataset.action === "save-background") {
+            const value = home.querySelector("[data-role='background-input']")?.value?.trim() || "";
+            homeSettings.backgroundUrl = value;
+            saveHomeSettings();
+            renderAllHomescreens();
+            return;
+          }
+
+          if (actionButton.dataset.action === "reset-background") {
+            homeSettings.backgroundUrl = "";
+            saveHomeSettings();
+            renderAllHomescreens();
+          }
+        });
+
+        home.querySelector("[data-role='bookmark-form']")?.addEventListener("submit", (event) => {
+          event.preventDefault();
+          const nameInput = home.querySelector("[data-role='bookmark-name']");
+          const urlInput = home.querySelector("[data-role='bookmark-url']");
+          const bookmark = normalizeBookmark({
+            name: nameInput?.value || "",
+            url: urlInput?.value || "",
+          });
+
+          if (!bookmark) return;
+
+          homeSettings.bookmarks = [...homeSettings.bookmarks, bookmark];
+          saveHomeSettings();
+          if (nameInput) nameInput.value = "";
+          if (urlInput) urlInput.value = "";
+          renderAllHomescreens();
+        });
+
+        tab.home = home;
+        renderHomescreen(tab);
+        ensureClockTicker();
+        return home;
       }
 
       function readFrameTargetUrl(frame) {
@@ -504,6 +1067,8 @@
         if (!tab) return;
         tab.title = nextTitle && nextTitle.trim() ? nextTitle.trim() : tabTitleFromUrl(tab.url);
         renderTab(tab);
+        renderHomescreen(tab);
+        updateControls();
       }
 
       function updateAddressBar(tab = getActiveTab()) {
@@ -513,13 +1078,15 @@
 
       function updateControls() {
         const tab = getActiveTab();
-        const canReload = Boolean(tab?.url || tab?.frame?.src);
+        const canReload = Boolean(tab?.mode === "web" && (tab.url || tab?.frame?.src));
         const canGoBack = Boolean(tab && tab.historyIndex > 0 && !tab.loading);
         const canGoForward = Boolean(tab && tab.historyIndex < tab.historyEntries.length - 1 && !tab.loading);
 
         reloadBtn.disabled = !canReload;
         backBtn.disabled = !canGoBack;
         forwardBtn.disabled = !canGoForward;
+        openDirectBtn.disabled = !Boolean(tab?.mode === "web" && tab?.url);
+        openDirectBtn.classList.toggle("attention", challengeLikely(tab));
         chromeContent.classList.toggle("loading", Boolean(tab?.loading));
       }
 
@@ -547,15 +1114,17 @@
       }
 
       function createTab(id = nextId(), options = {}) {
+        const hasUrl = Boolean(options.url);
         const tab = {
           id,
           title: options.title ?? "New Tab",
           url: options.url ?? "",
           displayUrl: options.displayUrl ?? "",
           isSearch: options.isSearch ?? false,
-          loading: Boolean(options.url),
-          historyEntries: options.url ? [options.url] : [],
-          historyIndex: options.url ? 0 : -1,
+          loading: hasUrl,
+          historyEntries: hasUrl ? [options.url] : [],
+          historyIndex: hasUrl ? 0 : -1,
+          mode: hasUrl ? "web" : "home",
         };
         tabs.push(tab);
 
@@ -584,17 +1153,23 @@
         pane.dataset.tabId = id;
         pane.setAttribute("aria-busy", tab.loading ? "true" : "false");
 
+        const home = createHomescreen(tab);
+        pane.appendChild(home);
+
         const iframe = document.createElement("iframe");
         iframe.title = "Page content";
         iframe.loading = "eager";
-        iframe.sandbox = "allow-same-origin allow-forms allow-scripts allow-popups allow-pointer-lock allow-modals allow-downloads";
+        iframe.sandbox =
+          "allow-same-origin allow-forms allow-scripts allow-popups allow-popups-to-escape-sandbox allow-pointer-lock allow-modals allow-downloads allow-storage-access-by-user-activation";
         iframe.src = tab.url ? proxiedSrc(tab.url) : "about:blank";
+        iframe.classList.toggle("is-hidden", !hasUrl);
         pane.appendChild(iframe);
         tabPanes.appendChild(pane);
 
         tab.pane = pane;
         tab.frame = iframe;
         renderTab(tab);
+        syncPaneMode(tab);
 
         iframe.addEventListener("load", () => {
           handleFrameLoad(id);
@@ -609,6 +1184,7 @@
 
         const decodedTarget = readFrameTargetUrl(tab.frame);
         if (decodedTarget) {
+          tab.mode = "web";
           tab.url = decodedTarget;
           tab.isSearch = false;
           tab.displayUrl = "";
@@ -620,6 +1196,7 @@
           }
         }
 
+        syncPaneMode(tab);
         setTabLoading(tab, false);
         if (tab.id === activeTabId) {
           updateAddressBar(tab);
@@ -707,14 +1284,31 @@
         const target = parseNavigationTarget(raw);
         if (!tab || !target) return;
 
+        navigateInTab(tab, target.finalUrl, target);
+      }
+
+      function navigateInTab(tab, rawUrl, parsedTarget) {
+        const target = parsedTarget || parseNavigationTarget(rawUrl);
+        if (!tab || !target) return;
+
+        tab.mode = "web";
         tab.url = target.finalUrl;
         tab.displayUrl = target.displayUrl;
         tab.isSearch = target.isSearch;
         syncTabHistory(tab, target.finalUrl);
         setTabTitle(tab, target.title);
+        syncPaneMode(tab);
         updateAddressBar(tab);
         setTabLoading(tab, true);
         tab.frame.src = proxiedSrc(target.finalUrl);
+      }
+
+      function syncPaneMode(tab) {
+        if (!tab?.home || !tab?.frame) return;
+        const showHome = tab.mode !== "web";
+        tab.home.classList.toggle("hidden", !showHome);
+        tab.frame.classList.toggle("is-hidden", showHome);
+        renderHomescreen(tab);
       }
 
       function stepHistory(direction) {
@@ -734,9 +1328,11 @@
         } catch {
           const targetUrl = tab.historyEntries[targetIndex];
           tab.historyIndex = targetIndex;
+          tab.mode = "web";
           tab.url = targetUrl;
           tab.isSearch = false;
           tab.displayUrl = "";
+          syncPaneMode(tab);
           updateAddressBar(tab);
           tab.frame.src = proxiedSrc(targetUrl);
         }
@@ -749,13 +1345,19 @@
 
       reloadBtn.addEventListener("click", () => {
         const tab = getActiveTab();
-        if (!tab) return;
+        if (!tab || tab.mode !== "web") return;
         setTabLoading(tab, true);
         try {
           tab.frame.contentWindow?.location?.reload();
         } catch {
           tab.frame.src = tab.url ? proxiedSrc(tab.url) : tab.frame.src;
         }
+      });
+
+      openDirectBtn.addEventListener("click", () => {
+        const tab = getActiveTab();
+        if (!tab?.url) return;
+        window.open(proxiedSrc(tab.url), "_blank", "noopener,noreferrer");
       });
 
       backBtn.addEventListener("click", () => {
@@ -794,10 +1396,12 @@
         }
 
         if (data.kind === "commit" && typeof data.url === "string" && /^https?:/i.test(data.url)) {
+          tab.mode = "web";
           tab.url = data.url;
           tab.isSearch = false;
           tab.displayUrl = "";
           syncTabHistory(tab, data.url);
+          syncPaneMode(tab);
           setTabLoading(tab, false);
           if (tab.id === activeTabId) {
             updateAddressBar(tab);
