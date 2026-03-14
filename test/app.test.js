@@ -82,6 +82,12 @@ function createUpstreamServer() {
       return;
     }
 
+    if (req.url === "/styles/legacy.css") {
+      res.writeHead(200, { "content-type": "text/plain; charset=utf-8" });
+      res.end('.legacy { background: url("/legacy-bg.png"); }');
+      return;
+    }
+
     if (req.url === "/redirect") {
       res.writeHead(302, { location: "/docs" });
       res.end();
@@ -111,6 +117,23 @@ function createUpstreamServer() {
         new Worker("/worker.js");
         navigator.serviceWorker.register("/sw.js", { scope: "/scope/" });
         //# sourceMappingURL=app.js.map
+      `);
+      return;
+    }
+
+    if (req.url === "/player.mjs") {
+      res.writeHead(200, { "content-type": "text/plain; charset=utf-8" });
+      res.end('const playerChunk = new URL("./chunks/player.js", import.meta.url);');
+      return;
+    }
+
+    if (req.url === "/video/master.m3u8") {
+      res.writeHead(200, { "content-type": "application/vnd.apple.mpegurl; charset=utf-8" });
+      res.end(`
+#EXTM3U
+#EXT-X-MAP:URI="init.mp4"
+#EXTINF:4.000,
+segment-1.ts
       `);
       return;
     }
@@ -202,7 +225,7 @@ test("proxy responds with rewritten HTML instead of hanging", async (t) => {
   assert.match(body, /window\.__plutoniumFrameBridgeInstalled/);
 });
 
-test("proxy rewrites CSS, JavaScript, manifest, and SVG assets", async (t) => {
+test("proxy rewrites CSS, JavaScript, manifest, SVG, and media playlist assets", async (t) => {
   resetUpstreamCookieStores();
   const upstream = createUpstreamServer();
   const upstreamBaseUrl = await listen(upstream);
@@ -217,31 +240,49 @@ test("proxy rewrites CSS, JavaScript, manifest, and SVG assets", async (t) => {
   const cssResponse = await fetch(
     `${proxyBaseUrl}/proxy?url=${encodeURIComponent(`${upstreamBaseUrl}/styles/site.css`)}`
   );
+  const legacyCssResponse = await fetch(
+    `${proxyBaseUrl}/proxy?url=${encodeURIComponent(`${upstreamBaseUrl}/styles/legacy.css`)}`
+  );
   const jsResponse = await fetch(`${proxyBaseUrl}/proxy?url=${encodeURIComponent(`${upstreamBaseUrl}/app.js`)}`);
+  const mjsResponse = await fetch(`${proxyBaseUrl}/proxy?url=${encodeURIComponent(`${upstreamBaseUrl}/player.mjs`)}`);
   const manifestResponse = await fetch(
     `${proxyBaseUrl}/proxy?url=${encodeURIComponent(`${upstreamBaseUrl}/site.webmanifest`)}`
   );
   const svgResponse = await fetch(`${proxyBaseUrl}/proxy?url=${encodeURIComponent(`${upstreamBaseUrl}/logo.svg`)}`);
+  const playlistResponse = await fetch(
+    `${proxyBaseUrl}/proxy?url=${encodeURIComponent(`${upstreamBaseUrl}/video/master.m3u8`)}`
+  );
 
   assert.equal(cssResponse.status, 200);
+  assert.equal(legacyCssResponse.status, 200);
   assert.equal(jsResponse.status, 200);
+  assert.equal(mjsResponse.status, 200);
   assert.equal(manifestResponse.status, 200);
   assert.equal(svgResponse.status, 200);
+  assert.equal(playlistResponse.status, 200);
   const cssBody = await cssResponse.text();
   assert.match(cssBody, /\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Fstyles%2Ftheme\.css/);
   assert.match(cssBody, /\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Fhero\.png/);
   assert.match(cssBody, /\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Fstyles%2Fsite\.css\.map/);
+  assert.match(await legacyCssResponse.text(), /\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Flegacy-bg\.png/);
   const jsBody = await jsResponse.text();
   assert.match(jsBody, /import "\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Fmodule\.js"/);
   assert.match(jsBody, /new Worker\("\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Fworker\.js"/);
   assert.match(jsBody, /navigator\.serviceWorker\.register\("\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Fsw\.js"/);
   assert.match(jsBody, /\/\/# sourceMappingURL=\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Fapp\.js\.map/);
+  assert.match(
+    await mjsResponse.text(),
+    /new URL\("\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Fchunks%2Fplayer\.js", import\.meta\.url\)/
+  );
   const manifestBody = await manifestResponse.text();
   assert.match(manifestBody, /"start_url": "\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Flaunch"/);
   assert.match(manifestBody, /"src": "\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Ficons%2Fapp-192\.png"/);
   const svgBody = await svgResponse.text();
   assert.match(svgBody, /mask: url\("\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Fmask\.svg"\)/);
   assert.match(svgBody, /xlink:href="\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Fsprite\.svg%23wordmark"/);
+  const playlistBody = await playlistResponse.text();
+  assert.match(playlistBody, /URI="\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Fvideo%2Finit\.mp4"/);
+  assert.match(playlistBody, /\/proxy\?url=http%3A%2F%2F127\.0\.0\.1%3A\d+%2Fvideo%2Fsegment-1\.ts/);
 });
 
 test("proxy handles HEAD requests and bad inputs cleanly", async (t) => {

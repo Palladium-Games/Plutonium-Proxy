@@ -18,6 +18,7 @@ import {
   rewriteHtml,
   rewriteJs,
   rewriteManifestJson,
+  rewriteTextPlaylist,
   sanitizeProxyHeaders,
 } from "./proxy-utils.js";
 import {
@@ -162,7 +163,7 @@ function createProxyOptions(logger) {
           setProxyHeader(
             proxyReq,
             "accept",
-            "text/html,application/xhtml+xml,application/xml;q=0.9,text/css,application/javascript,text/javascript,application/json;q=0.9,application/manifest+json,image/avif,image/webp,image/apng,image/svg+xml,*/*;q=0.8"
+            "text/html,application/xhtml+xml,application/xml;q=0.9,text/css,application/javascript,text/javascript,application/json;q=0.9,application/manifest+json,application/vnd.apple.mpegurl,application/x-mpegurl,audio/mpegurl,text/vtt,image/avif,image/webp,image/apng,image/svg+xml,audio/*,video/*,*/*;q=0.8"
           );
         }
 
@@ -220,7 +221,10 @@ function handleProxyResponse(proxyRes, req, res) {
   const targetUrl = req.plutoniumTarget || "";
   const rewriteable =
     isRewriteableContentType(contentType) ||
+    isStylesheetLikeResponse(contentType, targetUrl) ||
+    isJavaScriptLikeResponse(contentType, targetUrl) ||
     isManifestLikeResponse(contentType, targetUrl) ||
+    isPlaylistLikeResponse(contentType, targetUrl) ||
     isSvgLikeResponse(contentType, targetUrl);
 
   storeUpstreamCookies(req.plutoniumSessionId, targetUrl, proxyRes.headers["set-cookie"]);
@@ -295,7 +299,7 @@ function rewriteResponseBody(buffer, contentType, targetUrl) {
     return injectFrameHelper(rewriteHtml(buffer.toString("utf8"), targetUrl), targetUrl);
   }
 
-  if (contentType.includes("text/css")) {
+  if (isStylesheetLikeResponse(contentType, targetUrl)) {
     return rewriteCss(buffer.toString("utf8"), targetUrl);
   }
 
@@ -303,11 +307,15 @@ function rewriteResponseBody(buffer, contentType, targetUrl) {
     return rewriteManifestJson(buffer.toString("utf8"), targetUrl);
   }
 
+  if (isPlaylistLikeResponse(contentType, targetUrl)) {
+    return rewriteTextPlaylist(buffer.toString("utf8"), targetUrl);
+  }
+
   if (isSvgLikeResponse(contentType, targetUrl)) {
     return rewriteHtml(buffer.toString("utf8"), targetUrl);
   }
 
-  if (isJavaScriptContentType(contentType)) {
+  if (isJavaScriptLikeResponse(contentType, targetUrl)) {
     return rewriteJs(buffer.toString("utf8"), targetUrl);
   }
 
@@ -325,9 +333,39 @@ function isJavaScriptContentType(contentType) {
     contentType.includes("application/javascript") ||
     contentType.includes("application/x-javascript") ||
     contentType.includes("application/ecmascript") ||
+    contentType.includes("text/javascript1.8") ||
     contentType.includes("text/ecmascript") ||
     contentType.includes("text/javascript")
   );
+}
+
+/**
+ * Check whether the response behaves like a JavaScript module or script even
+ * when the server sends a generic text content type.
+ *
+ * @param {string} contentType Upstream content type.
+ * @param {string} targetUrl Current upstream URL.
+ * @returns {boolean} `true` when the body should be treated as JavaScript.
+ */
+function isJavaScriptLikeResponse(contentType, targetUrl) {
+  return (
+    isJavaScriptContentType(contentType) ||
+    hasUrlExtension(targetUrl, ".js") ||
+    hasUrlExtension(targetUrl, ".mjs") ||
+    hasUrlExtension(targetUrl, ".cjs")
+  );
+}
+
+/**
+ * Check whether the response behaves like a stylesheet even when the server
+ * falls back to a generic text content type.
+ *
+ * @param {string} contentType Upstream content type.
+ * @param {string} targetUrl Current upstream URL.
+ * @returns {boolean} `true` when the body should be treated as CSS.
+ */
+function isStylesheetLikeResponse(contentType, targetUrl) {
+  return contentType.includes("text/css") || hasUrlExtension(targetUrl, ".css");
 }
 
 /**
@@ -340,6 +378,23 @@ function isJavaScriptContentType(contentType) {
  */
 function isManifestLikeResponse(contentType, targetUrl) {
   return contentType.includes("application/manifest+json") || hasUrlExtension(targetUrl, ".webmanifest");
+}
+
+/**
+ * Check whether the response behaves like an HLS-style text playlist that
+ * needs URI rewriting for proxied media playback.
+ *
+ * @param {string} contentType Upstream content type.
+ * @param {string} targetUrl Current upstream URL.
+ * @returns {boolean} `true` when the body should be treated as a text playlist.
+ */
+function isPlaylistLikeResponse(contentType, targetUrl) {
+  return (
+    contentType.includes("application/vnd.apple.mpegurl") ||
+    contentType.includes("application/x-mpegurl") ||
+    contentType.includes("audio/mpegurl") ||
+    hasUrlExtension(targetUrl, ".m3u8")
+  );
 }
 
 /**

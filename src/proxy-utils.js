@@ -383,6 +383,60 @@ export function rewriteCss(css, baseUrl) {
 }
 
 /**
+ * Rewrite HLS-style text playlists so segment and map URLs stay inside the
+ * proxy, which helps media-heavy sites keep loading video chunks in-session.
+ *
+ * @param {string} playlist Raw text playlist.
+ * @param {string} baseUrl Current upstream playlist URL.
+ * @returns {string} Rewritten playlist text.
+ */
+export function rewriteTextPlaylist(playlist, baseUrl) {
+  try {
+    return playlist
+      .split(/\r?\n/)
+      .map((line) => rewritePlaylistLine(line, baseUrl))
+      .join("\n");
+  } catch {
+    return playlist;
+  }
+}
+
+/**
+ * Rewrite one playlist line or HLS tag in-place.
+ *
+ * @param {string} line Raw playlist line.
+ * @param {string} baseUrl Current upstream playlist URL.
+ * @returns {string} Rewritten line.
+ */
+function rewritePlaylistLine(line, baseUrl) {
+  const trimmed = `${line || ""}`.trim();
+  if (!trimmed) {
+    return line;
+  }
+
+  if (trimmed.startsWith("#")) {
+    return line.replace(/\bURI=(["']?)([^"',\s]+)\1/g, (match, quote, rawUrl) => {
+      const proxyValue = toProxiedResolvedUrl(rawUrl, baseUrl);
+      if (!proxyValue) {
+        return match;
+      }
+
+      const safeQuote = quote || '"';
+      return `URI=${safeQuote}${proxyValue}${safeQuote}`;
+    });
+  }
+
+  const proxyValue = toProxiedResolvedUrl(trimmed, baseUrl);
+  if (!proxyValue) {
+    return line;
+  }
+
+  const leadingWhitespace = line.match(/^\s*/)?.[0] || "";
+  const trailingWhitespace = line.match(/\s*$/)?.[0] || "";
+  return `${leadingWhitespace}${proxyValue}${trailingWhitespace}`;
+}
+
+/**
  * Rewrite root-relative JavaScript string literals so common fetch/XHR calls
  * continue to flow through the proxy.
  *
@@ -407,6 +461,10 @@ export function rewriteJs(js, baseUrl) {
       })
       .replace(/(\bimport\s*\(\s*)(["'])([^"']+)\2(\s*\))/g, (match, prefix, quote, specifier, suffix) => {
         const proxyValue = toProxiedResolvedUrl(specifier, baseUrl);
+        return proxyValue ? `${prefix}${quote}${proxyValue}${quote}${suffix}` : match;
+      })
+      .replace(/(\bnew\s+URL\s*\(\s*)(["'])([^"']+)\2(\s*,\s*import\.meta\.url\s*\))/g, (match, prefix, quote, requestUrl, suffix) => {
+        const proxyValue = toProxiedResolvedUrl(requestUrl, baseUrl);
         return proxyValue ? `${prefix}${quote}${proxyValue}${quote}${suffix}` : match;
       })
       .replace(
@@ -490,10 +548,14 @@ export function isRewriteableContentType(contentType) {
     contentType.includes("text/html") ||
     contentType.includes("text/css") ||
     contentType.includes("application/manifest+json") ||
+    contentType.includes("application/vnd.apple.mpegurl") ||
+    contentType.includes("application/x-mpegurl") ||
+    contentType.includes("audio/mpegurl") ||
     contentType.includes("image/svg+xml") ||
     contentType.includes("application/javascript") ||
     contentType.includes("application/x-javascript") ||
     contentType.includes("application/ecmascript") ||
+    contentType.includes("text/javascript1.8") ||
     contentType.includes("text/ecmascript") ||
     contentType.includes("text/javascript")
   );
@@ -508,9 +570,13 @@ export function isRewriteableContentType(contentType) {
 export function isCacheableAssetContentType(contentType) {
   return (
     contentType.includes("text/css") ||
+    contentType.includes("text/vtt") ||
     contentType.includes("application/javascript") ||
     contentType.includes("text/javascript") ||
     contentType.includes("application/manifest+json") ||
+    contentType.includes("application/vnd.apple.mpegurl") ||
+    contentType.includes("application/x-mpegurl") ||
+    contentType.includes("audio/mpegurl") ||
     contentType.includes("application/wasm") ||
     contentType.includes("application/json") ||
     contentType.includes("image/svg+xml") ||
@@ -519,6 +585,7 @@ export function isCacheableAssetContentType(contentType) {
     contentType.includes("application/font") ||
     contentType.includes("application/xml") ||
     contentType.includes("text/xml") ||
+    contentType.includes("audio/") ||
     contentType.includes("video/")
   );
 }

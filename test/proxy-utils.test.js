@@ -9,6 +9,7 @@ import {
   rewriteHtml,
   rewriteJs,
   rewriteManifestJson,
+  rewriteTextPlaylist,
   sanitizeProxyHeaders,
 } from "../src/proxy-utils.js";
 
@@ -96,6 +97,7 @@ test("rewriteCss and rewriteJs keep asset fetches inside the proxy", () => {
     import workerUrl from "/workers/main.js";
     export { helper } from "/modules/helper.js";
     import("/modules/dynamic.js");
+    const chunkUrl = new URL("./chunks/player.js", import.meta.url);
     new Worker("/workers/background.js");
     navigator.serviceWorker.register("/sw.js", { scope: "/scope/" });
     importScripts("/vendor/a.js", "/vendor/b.js");
@@ -133,6 +135,10 @@ test("rewriteCss and rewriteJs keep asset fetches inside the proxy", () => {
   assert.match(
     rewrittenJs,
     /import\("\/proxy\?url=https%3A%2F%2Fexample\.com%2Fmodules%2Fdynamic\.js"\)/
+  );
+  assert.match(
+    rewrittenJs,
+    /new URL\("\/proxy\?url=https%3A%2F%2Fexample\.com%2Fapp%2Fchunks%2Fplayer\.js", import\.meta\.url\)/
   );
   assert.match(
     rewrittenJs,
@@ -176,6 +182,22 @@ test("rewriteManifestJson and SVG-style hrefs keep metadata assets proxied", () 
   assert.match(rewrittenManifest, /"url": "\/proxy\?url=https%3A%2F%2Fexample\.com%2Fshortcuts%2Finbox"/);
   assert.match(rewrittenManifest, /"action": "\/proxy\?url=https%3A%2F%2Fexample\.com%2Fshare"/);
   assert.match(rewrittenSvg, /xlink:href="\/proxy\?url=https%3A%2F%2Fexample\.com%2Fsprite\.svg%23mark"/);
+});
+
+test("rewriteTextPlaylist keeps media playlist segments inside the proxy", () => {
+  const playlist = `
+#EXTM3U
+#EXT-X-MAP:URI="init.mp4"
+#EXTINF:4.000,
+segment-1.ts
+#EXT-X-KEY:METHOD=AES-128,URI="keys/main.key"
+  `;
+
+  const rewritten = rewriteTextPlaylist(playlist, "https://example.com/video/master.m3u8");
+
+  assert.match(rewritten, /URI="\/proxy\?url=https%3A%2F%2Fexample\.com%2Fvideo%2Finit\.mp4"/);
+  assert.match(rewritten, /\/proxy\?url=https%3A%2F%2Fexample\.com%2Fvideo%2Fsegment-1\.ts/);
+  assert.match(rewritten, /URI="\/proxy\?url=https%3A%2F%2Fexample\.com%2Fvideo%2Fkeys%2Fmain\.key"/);
 });
 
 test("buildFrameHelperScript and sanitizeProxyHeaders lock down iframe integration behavior", () => {
