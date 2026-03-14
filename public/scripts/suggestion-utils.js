@@ -24,6 +24,50 @@ const OMNIBOX_ACTIONS = [
 ];
 
 /**
+ * Build the action set that matches the current browser state.
+ *
+ * @param {object} options Action options.
+ * @param {boolean} options.hasClosedTabs Whether closed tabs are available.
+ * @param {boolean} options.includeDuplicate Whether duplicate-tab should be offered.
+ * @param {boolean} options.includePinToggle Whether pinning should be offered.
+ * @param {boolean} options.activeTabPinned Whether the active tab is already pinned.
+ * @returns {Array<object>} Render-ready action descriptors.
+ */
+function buildActionSuggestions({ hasClosedTabs, includeDuplicate, includePinToggle, activeTabPinned }) {
+  const actions = OMNIBOX_ACTIONS.filter((action) => {
+    if (action.action === "reopen-closed-tab" && !hasClosedTabs) {
+      return false;
+    }
+
+    if (action.action === "duplicate-tab" && !includeDuplicate) {
+      return false;
+    }
+
+    return true;
+  });
+
+  if (includePinToggle) {
+    actions.push(
+      activeTabPinned
+        ? {
+            action: "unpin-tab",
+            label: "Unpin current tab",
+            description: "Let this tab flow with the rest of the strip again",
+            keywords: "unpin release current tab tab strip",
+          }
+        : {
+            action: "pin-tab",
+            label: "Pin current tab",
+            description: "Keep this tab anchored at the front of the strip",
+            keywords: "pin keep anchor current tab front",
+          }
+    );
+  }
+
+  return actions;
+}
+
+/**
  * Build a ranked omnibox suggestion list from browser state.
  *
  * @param {object} options Suggestion options.
@@ -34,6 +78,8 @@ const OMNIBOX_ACTIONS = [
  * @param {string} [options.activeTabId] Active tab identifier.
  * @param {boolean} [options.hasClosedTabs] Whether a closed tab can be reopened.
  * @param {boolean} [options.includeDuplicate] Whether the duplicate-tab action should be offered.
+ * @param {boolean} [options.includePinToggle] Whether pinning should be offered for the active tab.
+ * @param {boolean} [options.activeTabPinned] Whether the active tab is already pinned.
  * @returns {Array<object>} Render-ready suggestion descriptors.
  */
 export function buildOmniboxSuggestions({
@@ -44,6 +90,8 @@ export function buildOmniboxSuggestions({
   activeTabId = "",
   hasClosedTabs = false,
   includeDuplicate = true,
+  includePinToggle = false,
+  activeTabPinned = false,
 }) {
   const trimmed = `${rawValue || ""}`.trim();
   const query = trimmed.toLowerCase();
@@ -136,28 +184,25 @@ export function buildOmniboxSuggestions({
       );
     });
 
-  OMNIBOX_ACTIONS.filter((action) => {
-    if (action.action === "reopen-closed-tab" && !hasClosedTabs) {
-      return false;
-    }
-
-    if (action.action === "duplicate-tab" && !includeDuplicate) {
-      return false;
-    }
-
-    return !query || matchesQuery(query, `${action.label} ${action.description} ${action.keywords}`) || suggestions.length < 6;
-  }).forEach((action) => {
-    pushSuggestion(
-      {
-        kind: "action",
-        badge: "Action",
-        label: action.label,
-        description: action.description,
-        action: action.action,
-      },
-      `action:${action.action}`
-    );
-  });
+  buildActionSuggestions({
+    hasClosedTabs,
+    includeDuplicate,
+    includePinToggle,
+    activeTabPinned,
+  })
+    .filter((action) => !query || matchesQuery(query, `${action.label} ${action.description} ${action.keywords}`) || suggestions.length < 6)
+    .forEach((action) => {
+      pushSuggestion(
+        {
+          kind: "action",
+          badge: "Action",
+          label: action.label,
+          description: action.description,
+          action: action.action,
+        },
+        `action:${action.action}`
+      );
+    });
 
   return suggestions;
 }

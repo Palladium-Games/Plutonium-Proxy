@@ -2,9 +2,15 @@ import {
   challengeLikely,
   escapeHtml,
   formatDate,
+  formatRecency,
   formatTime,
   normalizeBookmark,
+  tabTitleFromUrl,
 } from "./browser-utils.js";
+
+function compactDisplayUrl(value) {
+  return `${value || ""}`.replace(/^\w+:\/\//, "");
+}
 
 /**
  * Render the homescreen for a single tab.
@@ -12,9 +18,11 @@ import {
  * @param {object} tab Tab state object.
  * @param {object} options Rendering options.
  * @param {() => {backgroundUrl: string, bookmarks: Array<{name: string, url: string, accent: string}>}} options.getHomeSettings Current settings getter.
+ * @param {() => Array<{url: string, title: string, displayUrl?: string, isSearch?: boolean, lastVisitedAt: number}>} options.getRecentVisits Recent visit getter.
+ * @param {() => Array<{title: string, url: string, displayUrl?: string, isSearch?: boolean, pinned?: boolean, closedAt: number}>} options.getClosedTabs Recently closed getter.
  * @returns {void}
  */
-export function renderHomescreen(tab, { getHomeSettings }) {
+export function renderHomescreen(tab, { getHomeSettings, getRecentVisits, getClosedTabs }) {
   if (!tab?.home) {
     return;
   }
@@ -27,6 +35,10 @@ export function renderHomescreen(tab, { getHomeSettings }) {
   const listNode = tab.home.querySelector("[data-role='bookmark-list']");
   const backgroundInput = tab.home.querySelector("[data-role='background-input']");
   const challengeHint = tab.home.querySelector("[data-role='challenge-hint']");
+  const recentNode = tab.home.querySelector("[data-role='recent-visits']");
+  const closedNode = tab.home.querySelector("[data-role='closed-tabs']");
+  const recentVisits = getRecentVisits().slice(0, 4);
+  const closedTabs = getClosedTabs().slice(0, 4);
 
   if (timeNode) {
     timeNode.textContent = formatTime(now);
@@ -70,6 +82,40 @@ export function renderHomescreen(tab, { getHomeSettings }) {
       .join("");
   }
 
+  if (recentNode) {
+    recentNode.innerHTML = recentVisits.length
+      ? recentVisits
+          .map(
+            (visit, index) => `
+              <button type="button" class="home-feed-item" data-recent-visit="${index}">
+                <span class="home-feed-title">${escapeHtml(visit.title || tabTitleFromUrl(visit.url))}</span>
+                <span class="home-feed-meta">${escapeHtml(compactDisplayUrl(visit.displayUrl || visit.url))} · ${escapeHtml(
+                  formatRecency(visit.lastVisitedAt)
+                )}</span>
+              </button>
+            `
+          )
+          .join("")
+      : '<div class="home-feed-empty">Your latest pages will show up here.</div>';
+  }
+
+  if (closedNode) {
+    closedNode.innerHTML = closedTabs.length
+      ? closedTabs
+          .map(
+            (closedTab, index) => `
+              <button type="button" class="home-feed-item" data-reopen-closed-tab="${index}">
+                <span class="home-feed-title">${escapeHtml(closedTab.title || tabTitleFromUrl(closedTab.url))}</span>
+                <span class="home-feed-meta">${escapeHtml(compactDisplayUrl(closedTab.displayUrl || closedTab.url || "New Tab"))} · ${escapeHtml(
+                  closedTab.pinned ? `Pinned · ${formatRecency(closedTab.closedAt)}` : formatRecency(closedTab.closedAt)
+                )}</span>
+              </button>
+            `
+          )
+          .join("")
+      : '<div class="home-feed-empty">Closed tabs can be reopened from here.</div>';
+  }
+
   if (homeSettings.backgroundUrl) {
     tab.home.classList.add("has-custom-bg");
     tab.home.style.backgroundImage =
@@ -91,8 +137,11 @@ export function renderHomescreen(tab, { getHomeSettings }) {
  * @param {object} tab Tab state object.
  * @param {object} options Homescreen options.
  * @param {() => {backgroundUrl: string, bookmarks: Array<{name: string, url: string, accent: string}>}} options.getHomeSettings Current settings getter.
+ * @param {() => Array<{url: string, title: string, displayUrl?: string, isSearch?: boolean, lastVisitedAt: number}>} options.getRecentVisits Recent visit getter.
+ * @param {() => Array<{title: string, url: string, displayUrl?: string, isSearch?: boolean, pinned?: boolean, closedAt: number}>} options.getClosedTabs Recently closed getter.
  * @param {(updater: Function) => void} options.setHomeSettings Settings update hook.
  * @param {(tab: object, url: string) => void} options.navigateInTab Tab navigation callback.
+ * @param {(index: number) => void} options.reopenClosedTabAt Recently closed restore callback.
  * @returns {HTMLDivElement} Homescreen element.
  */
 export function createHomescreen(tab, options) {
@@ -121,6 +170,22 @@ export function createHomescreen(tab, options) {
             <div class="board-caption">Saved locally</div>
           </div>
           <div class="bookmark-grid" data-role="bookmarks"></div>
+        </div>
+        <div class="home-feed-grid">
+          <section class="feed-board">
+            <div class="section-heading compact">
+              <h2 class="board-title">Continue</h2>
+              <div class="board-caption">Recent visits</div>
+            </div>
+            <div class="home-feed-list" data-role="recent-visits"></div>
+          </section>
+          <section class="feed-board">
+            <div class="section-heading compact">
+              <h2 class="board-title">Recently Closed</h2>
+              <div class="board-caption">Restore tabs</div>
+            </div>
+            <div class="home-feed-list" data-role="closed-tabs"></div>
+          </section>
         </div>
         <aside class="customize-card" data-role="customize-card">
           <div class="section-heading compact">
@@ -155,6 +220,26 @@ export function createHomescreen(tab, options) {
       if (bookmark) {
         options.navigateInTab(tab, bookmark.url);
       }
+      return;
+    }
+
+    const recentButton = event.target.closest("[data-recent-visit]");
+    if (recentButton) {
+      const visit = options.getRecentVisits()[Number(recentButton.dataset.recentVisit)];
+      if (visit?.url) {
+        options.navigateInTab(tab, visit.url, {
+          finalUrl: visit.url,
+          displayUrl: visit.displayUrl || visit.url,
+          isSearch: Boolean(visit.isSearch),
+          title: visit.title || tabTitleFromUrl(visit.url),
+        });
+      }
+      return;
+    }
+
+    const reopenButton = event.target.closest("[data-reopen-closed-tab]");
+    if (reopenButton) {
+      options.reopenClosedTabAt(Number(reopenButton.dataset.reopenClosedTab));
       return;
     }
 

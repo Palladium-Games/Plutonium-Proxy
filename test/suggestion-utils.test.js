@@ -15,6 +15,8 @@ test("omnibox suggestions blend navigation, open tabs, bookmarks, history, and a
     activeTabId: "active",
     hasClosedTabs: true,
     includeDuplicate: true,
+    includePinToggle: true,
+    activeTabPinned: false,
   });
 
   assert.equal(suggestions[0].kind, "navigate");
@@ -25,6 +27,7 @@ test("omnibox suggestions blend navigation, open tabs, bookmarks, history, and a
     suggestions.some((suggestion) => suggestion.kind === "action" && suggestion.action === "reopen-closed-tab"),
     true
   );
+  assert.equal(suggestions.some((suggestion) => suggestion.kind === "action" && suggestion.action === "pin-tab"), true);
   assert.equal(suggestions.some((suggestion) => suggestion.kind === "tab" && suggestion.tabId === "active"), false);
 });
 
@@ -37,6 +40,8 @@ test("omnibox suggestions collapse duplicate URLs and only expose valid actions"
     activeTabId: "",
     hasClosedTabs: false,
     includeDuplicate: false,
+    includePinToggle: true,
+    activeTabPinned: true,
   });
 
   assert.equal(suggestions.filter((suggestion) => suggestion.finalUrl === "https://www.youtube.com/").length, 1);
@@ -48,5 +53,6 @@ test("omnibox suggestions collapse duplicate URLs and only expose valid actions"
     suggestions.some((suggestion) => suggestion.kind === "action" && suggestion.action === "duplicate-tab"),
     false
   );
+  assert.equal(suggestions.some((suggestion) => suggestion.kind === "action" && suggestion.action === "unpin-tab"), true);
   assert.equal(suggestions.some((suggestion) => suggestion.kind === "action" && suggestion.action === "new-tab"), true);
 });

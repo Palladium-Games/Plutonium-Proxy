@@ -14,6 +14,7 @@ import { loadHomeSettings, saveHomeSettings } from "./home-settings.js";
 import { createHomescreen, renderHomescreen } from "./home-view.js";
 import { loadBrowserState, rememberClosedTab, rememberVisit, saveBrowserState, snapshotTabs } from "./session-store.js";
 import { buildOmniboxSuggestions } from "./suggestion-utils.js";
+import { orderTabsForDisplay } from "./tab-utils.js";
 
 const tabStrip = document.getElementById("tab-strip");
 const tabPanes = document.getElementById("tab-panes");
@@ -47,6 +48,14 @@ function getHomeSettings() {
   return homeSettings;
 }
 
+function getRecentVisits() {
+  return recentVisits;
+}
+
+function getClosedTabs() {
+  return closedTabs;
+}
+
 function setHomeSettings(updater) {
   homeSettings = typeof updater === "function" ? updater(homeSettings) : updater;
   saveHomeSettings(homeSettings);
@@ -77,7 +86,12 @@ function getActiveTab() {
 }
 
 function renderAllHomescreens() {
-  tabs.forEach((tab) => renderHomescreen(tab, { getHomeSettings }));
+  const options = {
+    getHomeSettings,
+    getRecentVisits,
+    getClosedTabs,
+  };
+  tabs.forEach((tab) => renderHomescreen(tab, options));
 }
 
 function readFrameTargetUrl(frame) {
@@ -153,6 +167,7 @@ function rememberRecentVisitForTab(tab, url = tab?.url) {
     isSearch: tab.isSearch,
     lastVisitedAt: Date.now(),
   });
+  renderAllHomescreens();
   refreshOmniboxSuggestions({ preserveSelection: true });
   queueBrowserStateSave();
 }
@@ -167,8 +182,21 @@ function rememberRecentlyClosedTab(tab) {
     ...snapshot,
     closedAt: Date.now(),
   });
+  renderAllHomescreens();
   refreshOmniboxSuggestions({ preserveSelection: true });
   queueBrowserStateSave();
+}
+
+function syncTabOrder() {
+  tabs = orderTabsForDisplay(tabs);
+  tabs.forEach((tab) => {
+    if (tab.dom) {
+      tabStrip.appendChild(tab.dom);
+    }
+    if (tab.pane) {
+      tabPanes.appendChild(tab.pane);
+    }
+  });
 }
 
 function renderTab(tab) {
@@ -178,6 +206,15 @@ function renderTab(tab) {
 
   tab.dom.querySelector(".chrome-tab-title").textContent = tab.title;
   tab.dom.classList.toggle("loading", Boolean(tab.loading));
+  tab.dom.classList.toggle("pinned", Boolean(tab.pinned));
+
+  const pinButton = tab.dom.querySelector(".chrome-tab-pin");
+  if (pinButton) {
+    const label = tab.pinned ? "Unpin tab" : "Pin tab";
+    pinButton.setAttribute("aria-label", label);
+    pinButton.setAttribute("aria-pressed", tab.pinned ? "true" : "false");
+    pinButton.setAttribute("title", label);
+  }
 }
 
 function setTabLoading(tab, loading) {
@@ -201,7 +238,7 @@ function setTabTitle(tab, nextTitle) {
 
   tab.title = nextTitle && nextTitle.trim() ? nextTitle.trim() : tabTitleFromUrl(tab.url);
   renderTab(tab);
-  renderHomescreen(tab, { getHomeSettings });
+  renderHomescreen(tab, { getHomeSettings, getRecentVisits, getClosedTabs });
   updateControls();
 }
 
@@ -303,6 +340,7 @@ function createTab(id = nextId(), options = {}) {
     url: currentUrl,
     displayUrl: options.displayUrl ?? "",
     isSearch: Boolean(options.isSearch),
+    pinned: Boolean(options.pinned),
     loading: mode === "web" && Boolean(currentUrl),
     historyEntries,
     historyIndex,
@@ -316,15 +354,27 @@ function createTab(id = nextId(), options = {}) {
   tabEl.innerHTML = `
     <div class="chrome-tab-favicon"></div>
     <span class="chrome-tab-title">${escapeHtml(tab.title)}</span>
-    <button type="button" class="chrome-tab-close" aria-label="Close tab">×</button>
+    <div class="chrome-tab-actions">
+      <button type="button" class="chrome-tab-pin" aria-label="Pin tab" aria-pressed="false" title="Pin tab">P</button>
+      <button type="button" class="chrome-tab-close" aria-label="Close tab">×</button>
+    </div>
   `;
   tabEl.querySelector(".chrome-tab-close").addEventListener("click", (event) => {
     event.stopPropagation();
     closeTab(id);
   });
+  tabEl.querySelector(".chrome-tab-pin").addEventListener("click", (event) => {
+    event.stopPropagation();
+    toggleTabPinned(id);
+  });
   tabEl.addEventListener("click", (event) => {
-    if (!event.target.classList.contains("chrome-tab-close")) {
+    if (!event.target.closest(".chrome-tab-close, .chrome-tab-pin")) {
       switchTab(id);
+    }
+  });
+  tabEl.addEventListener("dblclick", (event) => {
+    if (!event.target.closest(".chrome-tab-close, .chrome-tab-pin")) {
+      toggleTabPinned(id);
     }
   });
   tabStrip.appendChild(tabEl);
@@ -337,8 +387,11 @@ function createTab(id = nextId(), options = {}) {
 
   const home = createHomescreen(tab, {
     getHomeSettings,
+    getRecentVisits,
+    getClosedTabs,
     setHomeSettings,
     navigateInTab,
+    reopenClosedTabAt,
   });
   pane.appendChild(home);
   ensureClockTicker();
@@ -357,6 +410,7 @@ function createTab(id = nextId(), options = {}) {
   tab.frame = iframe;
   renderTab(tab);
   syncPaneMode(tab);
+  syncTabOrder();
 
   iframe.addEventListener("load", () => {
     handleFrameLoad(id);
@@ -364,6 +418,24 @@ function createTab(id = nextId(), options = {}) {
 
   queueBrowserStateSave();
   return tab;
+}
+
+function toggleTabPinned(id, forcedState) {
+  const tab = getTab(id);
+  if (!tab) {
+    return;
+  }
+
+  const nextPinned = typeof forcedState === "boolean" ? forcedState : !tab.pinned;
+  if (tab.pinned === nextPinned) {
+    return;
+  }
+
+  tab.pinned = nextPinned;
+  renderTab(tab);
+  syncTabOrder();
+  refreshOmniboxSuggestions({ preserveSelection: true });
+  queueBrowserStateSave();
 }
 
 function applyCommittedUrl(tab, url, nextTitle = "") {
@@ -383,7 +455,7 @@ function applyCommittedUrl(tab, url, nextTitle = "") {
   if (nextTitle) {
     setTabTitle(tab, nextTitle);
   } else {
-    renderHomescreen(tab, { getHomeSettings });
+    renderHomescreen(tab, { getHomeSettings, getRecentVisits, getClosedTabs });
     renderTab(tab);
   }
   if (tab.id === activeTabId) {
@@ -502,7 +574,7 @@ function syncPaneMode(tab) {
   const showHome = tab.mode !== "web";
   tab.home.classList.toggle("hidden", !showHome);
   tab.frame.classList.toggle("is-hidden", showHome);
-  renderHomescreen(tab, { getHomeSettings });
+  renderHomescreen(tab, { getHomeSettings, getRecentVisits, getClosedTabs });
 }
 
 function stepHistory(direction) {
@@ -563,13 +635,18 @@ function duplicateTab(sourceTab = getActiveTab()) {
 }
 
 function reopenClosedTab() {
-  const [mostRecent, ...rest] = closedTabs;
-  if (!mostRecent) {
+  return reopenClosedTabAt(0);
+}
+
+function reopenClosedTabAt(index) {
+  const reopenedState = closedTabs[index];
+  if (!reopenedState) {
     return null;
   }
 
-  closedTabs = rest;
-  const reopened = createTab(nextId(), mostRecent);
+  closedTabs = closedTabs.filter((_, currentIndex) => currentIndex !== index);
+  renderAllHomescreens();
+  const reopened = createTab(nextId(), reopenedState);
   switchTab(reopened.id);
   refreshOmniboxSuggestions({ preserveSelection: true });
   queueBrowserStateSave();
@@ -634,6 +711,8 @@ function refreshOmniboxSuggestions({ preserveSelection = false } = {}) {
     activeTabId,
     hasClosedTabs: closedTabs.length > 0,
     includeDuplicate: Boolean(getActiveTab()),
+    includePinToggle: Boolean(getActiveTab()?.mode === "web"),
+    activeTabPinned: Boolean(getActiveTab()?.pinned),
   });
 
   if (!omniboxSuggestions.length) {
@@ -677,6 +756,16 @@ function executeOmniboxAction(action) {
 
   if (action === "reopen-closed-tab") {
     reopenClosedTab();
+    return;
+  }
+
+  if (action === "pin-tab") {
+    toggleTabPinned(activeTabId, true);
+    return;
+  }
+
+  if (action === "unpin-tab") {
+    toggleTabPinned(activeTabId, false);
   }
 }
 

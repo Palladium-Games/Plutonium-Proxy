@@ -33,6 +33,7 @@ test("session store saves and restores normalized browser state", () => {
           url: "https://example.com",
           displayUrl: "example.com",
           isSearch: false,
+          pinned: true,
           historyEntries: ["https://example.com", "javascript:alert(1)"],
           historyIndex: 9,
           mode: "web",
@@ -43,6 +44,7 @@ test("session store saves and restores normalized browser state", () => {
           url: "",
           displayUrl: "",
           isSearch: false,
+          pinned: false,
           historyEntries: [],
           historyIndex: -1,
           mode: "home",
@@ -56,6 +58,7 @@ test("session store saves and restores normalized browser state", () => {
           url: "https://support.example.com",
           displayUrl: "support.example.com",
           isSearch: false,
+          pinned: true,
           historyEntries: ["https://support.example.com"],
           historyIndex: 0,
           mode: "web",
@@ -75,6 +78,7 @@ test("session store saves and restores normalized browser state", () => {
     url: "https://example.com/",
     displayUrl: "example.com",
     isSearch: false,
+    pinned: true,
     historyEntries: ["https://example.com/"],
     historyIndex: 0,
     mode: "web",
@@ -92,6 +96,7 @@ test("session store snapshots tabs and keeps recent visits deduplicated", () => 
       url: "https://www.google.com/search?q=plutonium",
       displayUrl: "plutonium",
       isSearch: true,
+      pinned: true,
       historyEntries: ["https://www.google.com/search?q=plutonium"],
       historyIndex: 0,
       mode: "web",
@@ -105,6 +110,7 @@ test("session store snapshots tabs and keeps recent visits deduplicated", () => 
     url: "https://www.google.com/search?q=plutonium",
     displayUrl: "plutonium",
     isSearch: true,
+    pinned: true,
     historyEntries: ["https://www.google.com/search?q=plutonium"],
     historyIndex: 0,
     mode: "web",
@@ -145,6 +151,7 @@ test("session store limits and deduplicates recently closed tabs", () => {
     url: "https://closed4.example.com",
     displayUrl: "closed4.example.com",
     isSearch: false,
+    pinned: true,
     historyEntries: ["https://closed4.example.com"],
     historyIndex: 0,
     mode: "web",
@@ -154,5 +161,6 @@ test("session store limits and deduplicates recently closed tabs", () => {
   assert.equal(nextClosedTabs.length, 12);
   assert.equal(nextClosedTabs[0].url, "https://closed4.example.com/");
   assert.equal(nextClosedTabs[0].closedAt, 1234);
+  assert.equal(nextClosedTabs[0].pinned, true);
   assert.equal(nextClosedTabs.filter((tab) => tab.url === "https://closed4.example.com/").length, 1);
 });

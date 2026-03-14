@@ -16,17 +16,19 @@ Plutonium is a local browser shell that loads remote pages through `/proxy?url=.
 - Type plain text to run a Google search.
 - Click into the address bar to get smart suggestions from open tabs, saved bookmarks, recent visits, and browser actions.
 - Use `+` to open a new tab and `x` to close the current tab.
+- Pin a tab from the tab strip or by typing `pin tab` into the omnibox to keep it anchored at the front.
 - Plutonium restores your last open tabs after a reload, so your session comes back automatically.
 - Modern sites with inline styles, inline ES modules, import maps, workers, service worker registration, manifests, SVG assets, and source-map-linked CSS or JavaScript now have broader compatibility support than earlier builds.
 - Challenge-heavy pages now show a `Focus Mode` handoff that opens the same Plutonium session in a full browser tab when an embedded flow needs more room.
 - Watch the tab pulse and top progress bar during page loads.
-- Empty tabs open a minimal Plutonium homescreen with the current time, saved bookmarks, and a customizable background.
+- Empty tabs open a minimal Plutonium homescreen with the current time, saved bookmarks, recent visits, recently closed tabs, and a customizable background.
 - The shell now loads multiple frontend CSS and JavaScript assets instead of one giant inline page, so browser-style UI updates are easier to evolve.
 
 ## Homescreen
 
 - Click `Customize` on a new tab to set a background image URL.
 - Add bookmarks with a name and URL, or remove existing ones with the `×` button.
+- Use the `Continue` and `Recently Closed` panels to jump back into recent pages without opening the omnibox first.
 - Homescreen settings and browser session state are saved locally in your browser.
 
 ## Keyboard Shortcuts

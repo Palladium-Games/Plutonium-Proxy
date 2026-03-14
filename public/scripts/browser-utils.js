@@ -8,6 +8,10 @@ const HTML_ESCAPE_MAP = {
   "'": "&#39;",
 };
 
+const MINUTE_MS = 60 * 1000;
+const HOUR_MS = 60 * MINUTE_MS;
+const DAY_MS = 24 * HOUR_MS;
+
 /**
  * Create a unique tab identifier.
  *
@@ -94,6 +98,32 @@ export function formatTime(now = new Date()) {
  */
 export function formatDate(now = new Date()) {
   return DATE_FORMATTER.format(now);
+}
+
+/**
+ * Format a timestamp as a short recency label for homescreen activity lists.
+ *
+ * @param {number} timestamp Unix time in milliseconds.
+ * @param {number} [now=Date.now()] Current time in milliseconds.
+ * @returns {string} Compact relative-time label.
+ */
+export function formatRecency(timestamp, now = Date.now()) {
+  const safeTimestamp = Number.isFinite(timestamp) ? Number(timestamp) : 0;
+  const delta = Math.max(0, now - safeTimestamp);
+
+  if (delta < MINUTE_MS) {
+    return "Just now";
+  }
+
+  if (delta < HOUR_MS) {
+    return `${Math.max(1, Math.round(delta / MINUTE_MS))}m ago`;
+  }
+
+  if (delta < DAY_MS) {
+    return `${Math.max(1, Math.round(delta / HOUR_MS))}h ago`;
+  }
+
+  return `${Math.max(1, Math.round(delta / DAY_MS))}d ago`;
 }
 
 /**

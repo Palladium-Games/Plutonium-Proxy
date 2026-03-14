@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   challengeLikely,
   escapeHtml,
+  formatRecency,
   getFocusModeHref,
   getDisplayedValue,
   getProtocolBadge,
@@ -19,6 +20,10 @@ test("browser utilities normalize bookmarks and escape display text", () => {
   });
   assert.equal(normalizeBookmark({ name: "", url: "https://example.com" }), null);
   assert.equal(escapeHtml('<unsafe & "quoted">'), "&lt;unsafe &amp; &quot;quoted&quot;&gt;");
+  assert.equal(formatRecency(5_000, 15_000), "Just now");
+  assert.equal(formatRecency(0, 5 * 60 * 1000), "5m ago");
+  assert.equal(formatRecency(0, 2 * 60 * 60 * 1000), "2h ago");
+  assert.equal(formatRecency(0, 3 * 24 * 60 * 60 * 1000), "3d ago");
 });
 
 test("browser utilities parse omnibox input and present tab chrome values", () => {
