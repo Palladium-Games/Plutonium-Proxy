@@ -25,6 +25,7 @@ import {
   attachProxySession,
   getUpstreamCookieHeader,
   storeUpstreamCookies,
+  consumeLinkQuota,
 } from "./upstream-cookies.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -77,7 +78,7 @@ export function createApp(options = {}) {
 
   app.use(express.static(staticDir));
 
-  app.use(PROXY_PATH, validateTargetUrl, createProxyMiddleware(createProxyOptions(proxyLogger)));
+app.use(PROXY_PATH, validateTargetUrl, enforceLinkLimit, createProxyMiddleware(createProxyOptions(proxyLogger)));
 
   return app;
 }
@@ -125,6 +126,42 @@ function validateTargetUrl(req, res, next) {
 
   req.plutoniumTarget = target;
   next();
+}
+
+function enforceLinkLimit(req, res, next) {
+  if (!isNavigationRequest(req)) {
+    return next();
+  }
+
+  const quota = consumeLinkQuota(req.plutoniumSessionId);
+  if (!quota.allowed) {
+    res.status(429).json({
+      error: `Weekly link limit reached (${quota.limit}); try again after next week.`,
+    });
+    return;
+  }
+
+  res.setHeader("X-Plutonium-Link-Remaining", String(quota.remaining));
+  next();
+}
+
+function isNavigationRequest(req) {
+  const dest = `${req.headers["sec-fetch-dest"] || ""}`.toLowerCase();
+  if (dest) {
+    return dest === "document";
+  }
+
+  const mode = `${req.headers["sec-fetch-mode"] || ""}`.toLowerCase();
+  if (mode) {
+    return mode === "navigate";
+  }
+
+  const accept = `${req.headers.accept || ""}`.toLowerCase();
+  if (!accept) {
+    return true;
+  }
+
+  return accept.includes("text/html") || accept.includes("application/xhtml+xml");
 }
 
 /**

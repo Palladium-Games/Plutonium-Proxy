@@ -367,3 +367,37 @@ test("proxy persists upstream cookies and remaps local origin headers", async (t
   assert.equal(payload.origin, upstreamBaseUrl);
   assert.equal(payload.referer, `${upstreamBaseUrl}/cookie-start`);
 });
+
+test("proxy enforces a weekly link limit per session", async (t) => {
+  resetUpstreamCookieStores();
+  const upstream = createUpstreamServer();
+  const upstreamBaseUrl = await listen(upstream);
+  t.after(() => close(upstream));
+
+  const app = createApp({ enableRequestLogging: false, logger: silentLogger });
+  const proxyServer = app.listen(0, "127.0.0.1");
+  await once(proxyServer, "listening");
+  t.after(() => close(proxyServer));
+
+  const proxyBaseUrl = `http://127.0.0.1:${proxyServer.address().port}`;
+  const proxyUrl = `${proxyBaseUrl}/proxy?url=${encodeURIComponent(`${upstreamBaseUrl}/`)}`;
+
+  const navigationHeaders = {
+    "sec-fetch-mode": "navigate",
+    "sec-fetch-dest": "document",
+    accept: "text/html",
+  };
+  const first = await fetch(proxyUrl, { headers: navigationHeaders });
+  const sessionCookie = (first.headers.get("set-cookie") || "").split(";")[0];
+  assert.equal(first.status, 200);
+  assert.equal(first.headers.get("x-plutonium-link-remaining"), "1");
+
+  const second = await fetch(proxyUrl, { headers: { ...navigationHeaders, cookie: sessionCookie } });
+  assert.equal(second.status, 200);
+  assert.equal(second.headers.get("x-plutonium-link-remaining"), "0");
+
+  const third = await fetch(proxyUrl, { headers: { ...navigationHeaders, cookie: sessionCookie } });
+  assert.equal(third.status, 429);
+  const payload = await third.json();
+  assert.match(payload.error, /Weekly link limit reached/i);
+});
