@@ -116,13 +116,13 @@ export function buildOmniboxSuggestions({
   if (trimmed) {
     const target = parseNavigationTarget(trimmed);
     pushSuggestion(
-      {
-        kind: "navigate",
-        badge: target?.isSearch ? "Search" : "Go",
-        label: target?.isSearch ? `Search Google for "${trimmed}"` : `Open ${simplifyUrl(target?.finalUrl || trimmed)}`,
-        description: target?.finalUrl || trimmed,
-        finalUrl: target?.finalUrl || "",
-        displayUrl: target?.displayUrl || trimmed,
+        {
+          kind: "navigate",
+          badge: target?.isSearch ? "Search" : "Go",
+          label: target?.isSearch ? `Search for "${trimmed}"` : `Open ${simplifyUrl(target?.finalUrl || trimmed)}`,
+          description: target?.finalUrl || trimmed,
+          finalUrl: target?.finalUrl || "",
+          displayUrl: target?.displayUrl || trimmed,
         isSearch: Boolean(target?.isSearch),
         title: target?.title || tabTitleFromUrl(target?.finalUrl || ""),
       },

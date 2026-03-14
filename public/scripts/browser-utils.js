@@ -240,7 +240,7 @@ export function parseNavigationTarget(raw) {
   }
 
   return {
-    finalUrl: `https://www.google.com/search?q=${encodeURIComponent(trimmed)}`,
+    finalUrl: `https://duckduckgo.com/html/?q=${encodeURIComponent(trimmed)}`,
     displayUrl: trimmed,
     isSearch: true,
     title: "Search",

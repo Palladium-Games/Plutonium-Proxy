@@ -719,8 +719,8 @@ export function buildFrameHelperScript(targetUrl) {
       if (root.matches("[srcset]")) {
         var rootSrcset = root.getAttribute("srcset");
         if (rootSrcset) {
-          var rootSrcsetParts = rootSrcset.split(/,\s*/).map(function (part) {
-            var tokens = part.trim().split(/\s+/);
+          var rootSrcsetParts = rootSrcset.split(/,\\s*/).map(function (part) {
+            var tokens = part.trim().split(/\\s+/);
             var proxied = toProxyUrl(tokens[0]);
             return proxied ? [proxied].concat(tokens.slice(1)).join(" ").trim() : part;
           });
@@ -730,8 +730,8 @@ export function buildFrameHelperScript(targetUrl) {
       if (root.matches("[imagesrcset]")) {
         var rootImageSrcset = root.getAttribute("imagesrcset");
         if (rootImageSrcset) {
-          var rootImageParts = rootImageSrcset.split(/,\s*/).map(function (part) {
-            var tokens = part.trim().split(/\s+/);
+          var rootImageParts = rootImageSrcset.split(/,\\s*/).map(function (part) {
+            var tokens = part.trim().split(/\\s+/);
             var proxied = toProxyUrl(tokens[0]);
             return proxied ? [proxied].concat(tokens.slice(1)).join(" ").trim() : part;
           });
@@ -746,8 +746,8 @@ export function buildFrameHelperScript(targetUrl) {
     root.querySelectorAll("[srcset]").forEach(function (element) {
       var srcset = element.getAttribute("srcset");
       if (srcset) {
-        var parts = srcset.split(/,\s*/).map(function (part) {
-          var tokens = part.trim().split(/\s+/);
+        var parts = srcset.split(/,\\s*/).map(function (part) {
+          var tokens = part.trim().split(/\\s+/);
           var proxied = toProxyUrl(tokens[0]);
           return proxied ? [proxied].concat(tokens.slice(1)).join(" ").trim() : part;
         });
@@ -758,8 +758,8 @@ export function buildFrameHelperScript(targetUrl) {
     root.querySelectorAll("[imagesrcset]").forEach(function (element) {
       var imageSrcset = element.getAttribute("imagesrcset");
       if (imageSrcset) {
-        var imageParts = imageSrcset.split(/,\s*/).map(function (part) {
-          var tokens = part.trim().split(/\s+/);
+        var imageParts = imageSrcset.split(/,\\s*/).map(function (part) {
+          var tokens = part.trim().split(/\\s+/);
           var proxied = toProxyUrl(tokens[0]);
           return proxied ? [proxied].concat(tokens.slice(1)).join(" ").trim() : part;
         });

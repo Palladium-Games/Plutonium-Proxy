@@ -34,7 +34,7 @@ test("browser utilities parse omnibox input and present tab chrome values", () =
     title: "example.com",
   });
   assert.deepEqual(parseNavigationTarget("best proxy ever"), {
-    finalUrl: "https://www.google.com/search?q=best%20proxy%20ever",
+    finalUrl: "https://duckduckgo.com/html/?q=best%20proxy%20ever",
     displayUrl: "best proxy ever",
     isSearch: true,
     title: "Search",

@@ -217,6 +217,8 @@ test("buildFrameHelperScript and sanitizeProxyHeaders lock down iframe integrati
   assert.match(helper, /XMLHttpRequest\.prototype\.open/);
   assert.match(helper, /window\.Worker = function/);
   assert.match(helper, /navigator\.serviceWorker\.register = function/);
+  assert.match(helper, /split\(\/,\\s\*\//);
+  assert.match(helper, /split\(\/\\s\+\//);
   assert.match(helper, /rewriteNodeTree\(document\)/);
   assert.ok(!("x-frame-options" in headers));
   assert.ok(!("strict-transport-security" in headers));

@@ -13,7 +13,7 @@ Plutonium is a local browser shell that loads remote pages through `/proxy?url=.
 ## Everyday Browsing
 
 - Type a URL such as `example.com` to open a site directly.
-- Type plain text to run a Google search.
+- Type plain text to run a web search.
 - Click into the address bar to get smart suggestions from open tabs, saved bookmarks, recent visits, and browser actions.
 - Use `+` to open a new tab and `x` to close the current tab.
 - Pin a tab from the tab strip or by typing `pin tab` into the omnibox to keep it anchored at the front.
