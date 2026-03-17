@@ -920,6 +920,7 @@ window.addEventListener("message", (event) => {
     setTabTitle(tab, data.title);
     queueBrowserStateSave();
   }
+
 });
 
 document.addEventListener("keydown", (event) => {

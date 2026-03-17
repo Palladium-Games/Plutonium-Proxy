@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 
 const SESSION_COOKIE_NAME = "plutonium_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
+const WEEKLY_LINK_LIMIT = 2;
 const sessionStores = new Map();
 
 /**
@@ -176,10 +177,57 @@ function touchSessionStore(sessionId) {
   const entry = {
     lastSeenAt: Date.now(),
     cookies: new Map(),
+    linkUsage: {
+      weekKey: getWeekKey(Date.now()),
+      count: 0,
+    },
   };
   sessionStores.set(sessionId, entry);
   pruneExpiredSessions();
   return entry.cookies;
+}
+
+function getWeekKey(timestamp) {
+  const date = new Date(timestamp);
+  const day = date.getDay(); // 0=Sunday
+  const diff = (day + 6) % 7;
+  date.setHours(0, 0, 0, 0);
+  date.setDate(date.getDate() - diff);
+  return date.getTime();
+}
+
+function getSessionEntry(sessionId) {
+  if (!sessionId) {
+    return null;
+  }
+  return sessionStores.get(sessionId) || null;
+}
+
+function ensureWeekUsage(entry) {
+  const now = Date.now();
+  const weekKey = getWeekKey(now);
+  if (!entry.linkUsage || entry.linkUsage.weekKey !== weekKey) {
+    entry.linkUsage = {
+      weekKey,
+      count: 0,
+    };
+  }
+  return entry.linkUsage;
+}
+
+export function consumeLinkQuota(sessionId) {
+  const entry = getSessionEntry(sessionId);
+  if (!entry) {
+    return { allowed: true, remaining: WEEKLY_LINK_LIMIT, limit: WEEKLY_LINK_LIMIT };
+  }
+
+  const usage = ensureWeekUsage(entry);
+  if (usage.count >= WEEKLY_LINK_LIMIT) {
+    return { allowed: false, remaining: 0, limit: WEEKLY_LINK_LIMIT };
+  }
+
+  usage.count += 1;
+  return { allowed: true, remaining: Math.max(0, WEEKLY_LINK_LIMIT - usage.count), limit: WEEKLY_LINK_LIMIT };
 }
 
 /**

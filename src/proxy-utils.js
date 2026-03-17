@@ -291,8 +291,13 @@ export function rewriteHtml(html, baseUrl) {
     .replace(/\s(xlink:href)=(["'])([^"']*)\2/gi, rewriteAttr)
     .replace(/\s(action)=(["'])([^"']*)\2/gi, rewriteAttr)
     .replace(/\s(formaction)=(["'])([^"']*)\2/gi, rewriteAttr)
-    .replace(/\s(data-src|data-href|data-action|data-poster)=(["'])([^"']*)\2/gi, rewriteAttr)
+    .replace(/\s(data-src|data-href|data-action|data-poster|data-url|data-srcset|data-background)=(["'])([^"']*)\2/gi, rewriteAttr)
     .replace(/\s(poster)=(["'])([^"']*)\2/gi, rewriteAttr)
+    .replace(/\s(cite)=(["'])([^"']*)\2/gi, rewriteAttr)
+    .replace(/\s(data)=(["'])([^"']*)\2/gi, (m, attr, q, v) => {
+      if (/^\s*#/.test(v) || /^data:/.test(v) || /^blob:/.test(v)) return m;
+      return rewriteAttr(m, attr, q, v);
+    })
     .replace(/\s(integrity)=(["'])[^"']*\2/gi, "")
     .replace(/\s(target)=(["'])(_top|_parent)\2/gi, ' target=$2_self$2');
 
@@ -444,11 +449,27 @@ function rewritePlaylistLine(line, baseUrl) {
  * @param {string} baseUrl Current upstream script URL.
  * @returns {string} Rewritten JavaScript.
  */
+/**
+ * Rewrite a quoted URL string in JS (double or single) to proxy URL when valid.
+ *
+ * @param {string} specifier Raw URL/specifier.
+ * @param {string} baseUrl Base URL for resolution.
+ * @returns {string | null} Proxied URL or null to leave unchanged.
+ */
+function toProxiedJsUrl(specifier, baseUrl) {
+  const proxyValue = toProxiedResolvedUrl(specifier, baseUrl);
+  return proxyValue || null;
+}
+
 export function rewriteJs(js, baseUrl) {
   try {
     return js
+      .replace(/(\bfetch\s*\(\s*)(["'])([^"']+)\2(\s*\))/g, (match, prefix, quote, url, suffix) => {
+        const proxyValue = toProxiedJsUrl(url, baseUrl);
+        return proxyValue ? `${prefix}${quote}${proxyValue}${quote}${suffix}` : match;
+      })
       .replace(/(\bimport\s+)(["'])([^"']+)\2/g, (match, prefix, quote, specifier) => {
-        const proxyValue = toProxiedResolvedUrl(specifier, baseUrl);
+        const proxyValue = toProxiedJsUrl(specifier, baseUrl);
         return proxyValue ? `${prefix}${quote}${proxyValue}${quote}` : match;
       })
       .replace(/(\bimport\b[\s\S]*?\bfrom\s*)(["'])([^"']+)\2/g, (match, prefix, quote, specifier) => {
@@ -502,6 +523,70 @@ export function rewriteJs(js, baseUrl) {
 }
 
 /**
+ * Relax CSP so proxied pages (YouTube, Instagram, Poki, captcha iframes) can run
+ * scripts and load frames. Preserves security where possible while allowing
+ * our injected script and third-party captcha/media iframes.
+ *
+ * @param {string} csp Raw Content-Security-Policy value.
+ * @returns {string} Relaxed CSP.
+ */
+function relaxCspForProxy(csp) {
+  if (!csp || typeof csp !== "string") return csp;
+
+  let out = csp
+    .replace(/frame-ancestors[^;]*;?/gi, "")
+    .replace(/report-uri[^;]*;?/gi, "")
+    .replace(/report-to[^;]*;?/gi, "")
+    .replace(/sandbox[^;]*;?/gi, "")
+    .replace(/navigate-to[^;]*;?/gi, "");
+
+  // Allow any frame source so captcha (recaptcha, hcaptcha) and embedded players load
+  out = out.replace(/\bframe-src\s+[^;]*/gi, "frame-src *");
+
+  // Ensure script-src allows our inline helper and eval (needed for many SPA/captcha flows)
+  if (/\bscript-src\b/i.test(out)) {
+    out = out.replace(/\bscript-src\s+([^;]*)/gi, (_, v) => {
+      const rest = v.trim();
+      if (/['"]unsafe-inline['"]/i.test(rest) && /['"]unsafe-eval['"]/i.test(rest)) return `script-src ${rest}`;
+      let added = rest;
+      if (!/['"]unsafe-inline['"]/i.test(rest)) added += " 'unsafe-inline'";
+      if (!/['"]unsafe-eval['"]/i.test(rest)) added += " 'unsafe-eval'";
+      return `script-src ${added}`;
+    });
+  } else {
+    out = out.trimEnd();
+    if (out && !out.endsWith(";")) out += ";";
+    out += " script-src * 'unsafe-inline' 'unsafe-eval'";
+  }
+
+  // Allow inline styles (YouTube/Instagram/Poki use them)
+  if (/\bstyle-src\b/i.test(out)) {
+    out = out.replace(/\bstyle-src\s+([^;]*)/gi, (_, v) => {
+      if (/['"]unsafe-inline['"]/i.test(v)) return `style-src ${v.trim()}`;
+      return `style-src ${v.trim()} 'unsafe-inline'`;
+    });
+  } else {
+    out = out.trimEnd();
+    if (out && !out.endsWith(";")) out += ";";
+    out += " style-src * 'unsafe-inline'";
+  }
+
+  // connect-src: allow all so fetch/XHR go through our proxy
+  if (/\bconnect-src\b/i.test(out)) {
+    out = out.replace(/\bconnect-src\s+[^;]*/gi, "connect-src *");
+  } else {
+    out = out.trimEnd();
+    if (out && !out.endsWith(";")) out += ";";
+    out += " connect-src *";
+  }
+
+  // media-src / img-src: allow all so media and thumbnails load
+  out = out.replace(/\b(media-src|img-src)\s+[^;]*/gi, "$1 *");
+
+  return out.trim().replace(/\s*;\s*;+/g, ";");
+}
+
+/**
  * Remove or soften upstream headers that interfere with iframe rendering.
  *
  * @param {import("http").IncomingHttpHeaders} sourceHeaders Upstream headers.
@@ -518,15 +603,9 @@ export function sanitizeProxyHeaders(sourceHeaders = {}) {
 
   const contentSecurityPolicy = headers["content-security-policy"];
   if (typeof contentSecurityPolicy === "string") {
-    const cleaned = contentSecurityPolicy
-      .replace(/frame-ancestors[^;]*;?/gi, "")
-      .replace(/report-uri[^;]*;?/gi, "")
-      .replace(/report-to[^;]*;?/gi, "")
-      .replace(/sandbox[^;]*;?/gi, "")
-      .replace(/navigate-to[^;]*;?/gi, "")
-      .trim();
-    if (cleaned) {
-      headers["content-security-policy"] = cleaned;
+    const relaxed = relaxCspForProxy(contentSecurityPolicy);
+    if (relaxed) {
+      headers["content-security-policy"] = relaxed;
     } else {
       delete headers["content-security-policy"];
     }
@@ -716,6 +795,20 @@ export function buildFrameHelperScript(targetUrl) {
       if (root.matches("form[action], form[target]")) {
         rewriteForm(root);
       }
+      if (root.matches("iframe[src], frame[src]")) {
+        var src = root.getAttribute("src");
+        if (src) {
+          var proxiedSrc = toProxyUrl(src);
+          if (proxiedSrc) root.setAttribute("src", proxiedSrc);
+        }
+      }
+      if (root.matches("object[data]")) {
+        var data = root.getAttribute("data");
+        if (data) {
+          var proxiedData = toProxyUrl(data);
+          if (proxiedData) root.setAttribute("data", proxiedData);
+        }
+      }
       if (root.matches("[srcset]")) {
         var rootSrcset = root.getAttribute("srcset");
         if (rootSrcset) {
@@ -742,6 +835,14 @@ export function buildFrameHelperScript(targetUrl) {
 
     root.querySelectorAll("a[href]").forEach(rewriteAnchor);
     root.querySelectorAll("form[action], form[target]").forEach(rewriteForm);
+    root.querySelectorAll("iframe[src], frame[src]").forEach(function (el) {
+      var s = el.getAttribute("src");
+      if (s) { var p = toProxyUrl(s); if (p) el.setAttribute("src", p); }
+    });
+    root.querySelectorAll("object[data]").forEach(function (el) {
+      var d = el.getAttribute("data");
+      if (d) { var p = toProxyUrl(d); if (p) el.setAttribute("data", p); }
+    });
 
     root.querySelectorAll("[srcset]").forEach(function (element) {
       var srcset = element.getAttribute("srcset");
@@ -921,7 +1022,7 @@ export function buildFrameHelperScript(targetUrl) {
       subtree: true,
       childList: true,
       attributes: true,
-      attributeFilter: ["href", "src", "srcset", "imagesrcset", "action", "target"]
+      attributeFilter: ["href", "src", "srcset", "imagesrcset", "action", "target", "data"]
     });
   }
 

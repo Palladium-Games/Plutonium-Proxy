@@ -69,6 +69,7 @@ export function createApp(options = {}) {
     })
   );
   app.use(cors());
+  app.use(express.json());
   app.use(attachProxySession);
 
   if (enableRequestLogging) {
