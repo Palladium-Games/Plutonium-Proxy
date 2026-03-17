@@ -160,6 +160,26 @@ function createProxyOptions(logger) {
 
         setProxyHeader(proxyReq, "user-agent", req.headers["user-agent"] || DEFAULT_USER_AGENT);
 
+        // Forward modern browser fingerprint headers when present so upstream
+        // sites (YouTube, Instagram, etc.) see something very close to a real
+        // Chrome tab instead of a generic Node client.
+        const forwardedHeaderNames = [
+          "sec-ch-ua",
+          "sec-ch-ua-mobile",
+          "sec-ch-ua-platform",
+          "sec-fetch-site",
+          "sec-fetch-mode",
+          "sec-fetch-dest",
+          "sec-fetch-user",
+          "upgrade-insecure-requests",
+          "dnt",
+        ];
+        for (const name of forwardedHeaderNames) {
+          if (!proxyReq.getHeader(name) && typeof req.headers[name] === "string") {
+            setProxyHeader(proxyReq, name, req.headers[name]);
+          }
+        }
+
         if (!proxyReq.getHeader("accept")) {
           setProxyHeader(
             proxyReq,
